@@ -1,0 +1,23 @@
+
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+*.db
+*.sqlite
+
+# NodeJS
+node_modules/
+dist/
+build/
+.env
+
+# Go
+vendor/
+
+# IDE
+.vscode/
+.idea/
