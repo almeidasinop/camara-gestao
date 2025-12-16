@@ -371,6 +371,41 @@ export default function Settings() {
                 </div>
             </div>
 
+            {/* Atualização de Sistema (Admin Only) */}
+            {userRole === 'Admin' && (
+                <div className="bg-white dark:bg-slate-950 p-6 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm mt-8 border-l-4 border-l-purple-500">
+                    <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                        <Monitor className="w-5 h-5 text-purple-600" /> Atualização de Sistema
+                    </h3>
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-4 p-4 bg-purple-50 dark:bg-purple-900/10 rounded-lg">
+                        <div>
+                            <h4 className="font-medium text-slate-900 dark:text-white">Buscar Versão Mais Recente</h4>
+                            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                                O sistema irá baixar a última versão do repositório, reconstruir os containers e reiniciar.
+                                <br />
+                                <span className="font-bold text-red-500">Atenção:</span> O sistema ficará indisponível por cerca de 1-2 minutos.
+                            </p>
+                        </div>
+                        <button
+                            onClick={async () => {
+                                if (window.confirm("Deseja realmente atualizar o sistema? Isso causará uma breve interrupção.")) {
+                                    try {
+                                        await api.triggerUpdate();
+                                        alert("Atualização solicitada! O sistema reiniciará em breve. Atualize a página em alguns minutos.");
+                                    } catch (e) {
+                                        alert("Erro ao solicitar atualização: " + e.message);
+                                    }
+                                }
+                            }}
+                            className="whitespace-nowrap px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg flex items-center gap-2 transition shadow-lg shadow-purple-500/20 font-medium"
+                        >
+                            <Download className="w-4 h-4" /> Atualizar Agora
+                        </button>
+                    </div>
+                </div>
+            )}
+
+
             <div className="text-center pt-8">
                 <p className="text-xs text-slate-400">
                     CâmaraGestão v1.0.0 &bull; Desenvolvido por Equipe TI

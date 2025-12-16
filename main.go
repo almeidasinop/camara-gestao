@@ -1143,6 +1143,10 @@ func main() {
 				catGroup.PUT("/:id", UpdateCategory)
 				catGroup.DELETE("/:id", DeleteCategory)
 			}
+
+			// System Update Trigger
+			secure.POST("/system/update", RoleMiddleware("Admin"), TriggerUpdate)
+
 			// System Settings
 			secure.GET("/settings", GetSettings)
 			secure.PUT("/settings/:key", RoleMiddleware("Admin"), UpdateSetting)
@@ -1583,4 +1587,45 @@ func checkSLA() {
 			}
 		}
 	}
+}
+
+// TriggerUpdate cria um arquivo de gatilho para o script watcher reiniciar o sistema
+func TriggerUpdate(c *gin.Context) {
+	// Verificar se já existe (debounce)
+	triggerFile := "update_request"
+
+	// Tentar criar no diretório persistente 'data' se possível, senão na raiz do workdir
+	// No Docker, WORKDIR é /app e data é /app/data.
+	if _, err := os.Stat("data"); err == nil {
+		triggerFile = "data/update_request"
+	}
+
+	if _, err := os.Stat(triggerFile); err == nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "Atualização já solicitada. Aguarde o reinício."})
+		return
+	}
+
+	file, err := os.Create(triggerFile)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Falha ao solicitar atualização: " + err.Error()})
+		return
+	}
+	defer file.Close()
+	file.WriteString(time.Now().Format(time.RFC3339))
+
+	// Pegar userID do contexto (setado pelo JWT middleware)
+	// Precisamos garantir que é uint
+	userIDVal, _ := c.Get("userID")
+	var userID uint
+	if val, ok := userIDVal.(float64); ok {
+		userID = uint(val)
+	} else if val, ok := userIDVal.(uint); ok {
+		userID = val
+	}
+
+	logAction(uint(userID), "SYSTEM_UPDATE", "System", 0, "Atualização de sistema solicitada via painel")
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Atualização solicitada com sucesso. O sistema buscará a nova versão e reiniciará em instantes.",
+	})
 }

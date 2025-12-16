@@ -111,5 +111,8 @@ export const api = {
         });
         if (!res.ok) throw new Error('Falha na importação');
         return res.json();
-    }
+    },
+
+    // System
+    triggerUpdate: () => request('/system/update', { method: 'POST' }),
 };
