@@ -48,9 +48,13 @@ func logAction(userID uint, action, entity string, entityID uint, details string
 
 func startBackupScheduler() {
 	// Criar diretório de backup se não existir
-	backupDir := "backups"
+	backupDir := os.Getenv("BACKUP_DIR")
+	if backupDir == "" {
+		backupDir = "backups"
+	}
+
 	if _, err := os.Stat(backupDir); os.IsNotExist(err) {
-		os.Mkdir(backupDir, 0755)
+		os.MkdirAll(backupDir, 0755)
 	}
 
 	// Rodar imediatamente ao iniciar (para segurança) e depois em loop

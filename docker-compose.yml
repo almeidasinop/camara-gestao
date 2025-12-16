@@ -11,4 +11,5 @@ services:
       - ./data:/app/data # Persistência do banco de dados na pasta local 'data'
     environment:
       - DB_PATH=/app/data/glpi_clone.db
+      - BACKUP_DIR=/app/data/backups
       - PORT=8080
