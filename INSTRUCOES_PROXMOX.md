@@ -29,8 +29,8 @@ curl -fsSL https://get.docker.com | sh
 ## 3. Instalar a Aplicação
 ```bash
 # Clone o repositório
-git clone https://github.com/SEU_USUARIO/camara_gestao.git
-cd camara_gestao
+git clone https://github.com/almeidasinop/camara-gestao.git
+cd camara-gestao
 
 # Dê permissão ao script de deploy
 chmod +x deploy.sh
@@ -47,7 +47,7 @@ O sistema roda na porta 80 por padrão via Docker.
 Quando você fizer alterações no código (no seu PC) e subir para o GitHub (`git push`), para atualizar o servidor Proxmox:
 
 1. Acesse o servidor (SSH ou Console).
-2. Entre na pasta: `cd camara_gestao`
+2. Entre na pasta: `cd camara-gestao`
 3. Rode o script:
    ```bash
    ./deploy.sh
