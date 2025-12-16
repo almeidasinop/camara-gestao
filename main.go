@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -14,6 +15,91 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
+
+// AuditLog registra ações críticas no sistema
+type AuditLog struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UserID    uint      `json:"user_id"`
+	User      User      `json:"user,omitempty"` // Preload
+	Action    string    `json:"action"`         // CREATE, UPDATE, DELETE, LOGIN
+	Entity    string    `json:"entity"`         // Ticket, User, Asset, Setting
+	EntityID  uint      `json:"entity_id"`
+	Details   string    `json:"details"` // Detalhes da mudança
+}
+
+// Helper para registrar log
+func logAction(userID uint, action, entity string, entityID uint, details string) {
+	// Rodar em goroutine para não bloquear a request principal
+	go func() {
+		db.Create(&AuditLog{
+			UserID:   userID,
+			Action:   action,
+			Entity:   entity,
+			EntityID: entityID,
+			Details:  details,
+		})
+	}()
+}
+
+// ==========================================
+// 8. ROTINA DE BACKUP AUTOMÁTICA
+// ==========================================
+
+func startBackupScheduler() {
+	// Criar diretório de backup se não existir
+	backupDir := "backups"
+	if _, err := os.Stat(backupDir); os.IsNotExist(err) {
+		os.Mkdir(backupDir, 0755)
+	}
+
+	// Rodar imediatamente ao iniciar (para segurança) e depois em loop
+	fmt.Println("[Backup] Iniciando serviço de backup automático...")
+	performBackup(backupDir)
+
+	ticker := time.NewTicker(6 * time.Hour) // Verifica a cada 6h (pode ser ajustado)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		performBackup(backupDir)
+		cleanupOldBackups(backupDir)
+	}
+}
+
+func performBackup(dir string) {
+	filename := fmt.Sprintf("backup_auto_%s.db", time.Now().Format("20060102_150405"))
+	filepath := filepath.Join(dir, filename)
+
+	fmt.Printf("[Backup] Gerando backup: %s ...\n", filename)
+
+	// VACUUM INTO é a maneira thread-safe de fazer backup do SQLite rodando
+	// Requer SQLite >= 3.27
+	err := db.Exec(fmt.Sprintf("VACUUM INTO '%s'", filepath)).Error
+	if err != nil {
+		fmt.Printf("[Backup] ERRO: %v\n", err)
+	} else {
+		fmt.Println("[Backup] Sucesso!")
+	}
+}
+
+func cleanupOldBackups(dir string) {
+	// Manter apenas ultimos 7 arquivos
+	files, err := os.ReadDir(dir)
+	if err != nil {
+		return
+	}
+
+	if len(files) > 10 {
+		// Simples: deletar os mais antigos se tiver mais de 10
+		// A ordenação padrão de ReadDir e o nome YYYYMMDD garantem ordem cronologica crescente (antigos primeiro)
+		for i := 0; i < len(files)-10; i++ {
+			f := files[i]
+			fullPath := filepath.Join(dir, f.Name())
+			os.Remove(fullPath)
+			fmt.Printf("[Backup] Limpeza: Removido %s\n", f.Name())
+		}
+	}
+}
 
 // ==========================================
 // 1. MODELOS DE DADOS (Structs)
@@ -194,6 +280,34 @@ func (a *Asset) BeforeUpdate(tx *gorm.DB) (err error) {
 var db *gorm.DB
 var jwtSecret = []byte("super_secret_key_change_me_in_prod")
 
+// SystemSetting define configurações globais de permissão
+type SystemSetting struct {
+	Key         string `gorm:"primaryKey" json:"key"` // ex: "user_view_reports"
+	Value       string `json:"value"`                 // ex: "true", "false"
+	Description string `json:"description"`
+}
+
+// Inicializa configurações padrão se não existirem
+func seedSettings() {
+	defaults := []SystemSetting{
+		{Key: "user_view_reports", Value: "false", Description: "Permitir que usuários comuns visualizem relatórios"},
+		{Key: "tech_delete_assets", Value: "false", Description: "Permitir que técnicos excluam ativos"},
+		{Key: "tech_delete_tickets", Value: "false", Description: "Permitir que técnicos excluam chamados"},
+		// Configurações LDAP
+		{Key: "ldap_enabled", Value: "false", Description: "Habilitar autenticação AD/LDAP (true/false)"},
+		{Key: "ldap_host", Value: "192.168.1.5", Description: "IP ou Hostname do servidor LDAP"},
+		{Key: "ldap_port", Value: "389", Description: "Porta do LDAP (padrão 389 ou 636 para SSL)"},
+		{Key: "ldap_basedn", Value: "dc=camara,dc=local", Description: "Base DN para busca de usuários"},
+		{Key: "ldap_domain", Value: "CAMARA", Description: "Domínio (NetBIOS) para login (ex: CAMARA\\user)"},
+	}
+	for _, s := range defaults {
+		var existing SystemSetting
+		if err := db.First(&existing, "key = ?", s.Key).Error; err != nil {
+			db.Create(&s)
+		}
+	}
+}
+
 // ==========================================
 // 2. CONFIGURAÇÃO E INICIALIZAÇÃO
 // ==========================================
@@ -205,18 +319,25 @@ func initDB() {
 		dbPath = "glpi_clone.db"
 	}
 
-	db, err = gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
+	// Configurar conexão com WAL e Busy Timeout para evitar locks
+	// Docs: https://github.com/mattn/go-sqlite3#connection-string
+	dsn := fmt.Sprintf("%s?_journal_mode=WAL&_busy_timeout=5000", dbPath)
+	db, err = gorm.Open(sqlite.Open(dsn), &gorm.Config{})
 	if err != nil {
 		panic("Falha ao conectar ao banco de dados: " + err.Error())
 	}
 
 	// AutoMigrate
-	err = db.AutoMigrate(&User{}, &Asset{}, &Ticket{}, &Comment{}, &AssetHistory{}, &ServiceCategory{})
+	err = db.AutoMigrate(&User{}, &Asset{}, &Ticket{}, &Comment{}, &AssetHistory{}, &ServiceCategory{}, &SystemSetting{}, &AuditLog{})
 	if err != nil {
 		panic("Falha na migração do banco de dados")
 	}
 
 	seedDatabase()
+	seedSettings()
+
+	// Iniciar agendador de backups
+	go startBackupScheduler()
 }
 
 func seedDatabase() {
@@ -280,29 +401,112 @@ func Login(c *gin.Context) {
 		return
 	}
 
+	// 1. Tentar Login Local
 	var user User
-	if err := db.Where("username = ?", input.Username).First(&user).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Credenciais inválidas"})
-		return
+	if err := db.Where("username = ?", input.Username).First(&user).Error; err == nil {
+		// Usuário encontrado localmente
+		if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password)); err == nil {
+			// Senha correta -> Gerar Token
+			generateTokenAndRespond(c, user)
+			return
+		}
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password)); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Credenciais inválidas"})
-		return
+	// 2. Se falhar local e LDAP estiver ativo, tentar LDAP
+	var ldapEnabled SystemSetting
+	db.First(&ldapEnabled, "key = ?", "ldap_enabled")
+
+	if ldapEnabled.Value == "true" {
+		ldapUser, err := authenticateLDAP(input.Username, input.Password)
+		if err == nil {
+			// Sucesso no LDAP! Sincronizar usuário local (JIT)
+
+			// Verificar se já existe (pode não ter achado antes por diferença de case ou senha local antiga)
+			var localUser User
+			if err := db.Where("username = ?", input.Username).First(&localUser).Error; err != nil {
+				// Cria novo usuário
+				localUser = User{
+					Username: input.Username,
+					FullName: ldapUser.FullName, // Assumindo que authenticateLDAP retorna isso
+					Role:     "User",            // Padrão
+					Password: "LDAP_MANAGED",    // Placeholder
+				}
+				db.Create(&localUser)
+			} else {
+				// Atualiza dados
+				localUser.FullName = ldapUser.FullName
+				db.Save(&localUser)
+			}
+
+			generateTokenAndRespond(c, localUser)
+			return
+		} else {
+			// fmt.Println("Erro LDAP:", err)
+		}
 	}
 
-	// Generate JWT
+	c.JSON(http.StatusUnauthorized, gin.H{"error": "Credenciais inválidas"})
+}
+
+func generateTokenAndRespond(c *gin.Context, user User) {
+	// Gerar JWT
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub":  user.ID,
-		"exp":  time.Now().Add(time.Hour * 24).Unix(),
-		"role": user.Role,
+		"userID":   user.ID,
+		"username": user.Username,
+		"role":     user.Role,
+		"exp":      time.Now().Add(time.Hour * 8).Unix(),
 	})
 
 	tokenString, err := token.SignedString(jwtSecret)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Falha ao gerar token"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao gerar token"})
+		return
 	}
-	c.JSON(http.StatusOK, gin.H{"token": tokenString, "username": user.Username, "role": user.Role})
+
+	c.JSON(http.StatusOK, gin.H{
+		"token": tokenString,
+		"user":  user,
+	})
+}
+
+// Stub para autenticação LDAP (precisa da lib go-ldap)
+// Retorna um struct temporário com dados do user
+type LDAPUser struct {
+	Username string
+	FullName string
+}
+
+func authenticateLDAP(username, password string) (*LDAPUser, error) {
+	// Carregar configurações
+	var host, port, domain SystemSetting
+	db.First(&host, "key = ?", "ldap_host")
+	db.First(&port, "key = ?", "ldap_port")
+	db.First(&domain, "key = ?", "ldap_domain")
+
+	// Por enquanto, como não temos a lib importada no main e pode dar erro de build se a net estiver ruim,
+	// vamos fazer um mock se a senha for "ldap123" para testar o fluxo.
+	// Na implementação real, usaríamos "github.com/go-ldap/ldap/v3"
+
+	// MOCK IMPLEMENTATION FOR SAFETY (até instalar a lib)
+	/*
+	   conn, err := ldap.DialURL(fmt.Sprintf("ldap://%s:%s", host.Value, port.Value))
+	   if err != nil { return nil, err }
+	   defer conn.Close()
+
+	   // Bind Simples (Login direto com user@domain ou domain\user)
+	   userPrincipal := fmt.Sprintf("%s\\%s", domain.Value, username) // ou username@domain.com
+
+	   if err := conn.Bind(userPrincipal, password); err != nil {
+	       return nil, err
+	   }
+
+	   // Se bind funcionou,Login OK.
+	   // Pesquisar para pegar FullName
+	   // ...
+	*/
+
+	// Simulando erro por enquanto pois a lib pode não estar lá
+	return nil, fmt.Errorf("LDAP não configurado/instalado")
 }
 
 // Check Role Middleware
@@ -465,6 +669,29 @@ func GetTickets(c *gin.Context) {
 	c.JSON(http.StatusOK, tickets)
 }
 
+func GetSettings(c *gin.Context) {
+	var settings []SystemSetting
+	db.Find(&settings)
+	c.JSON(http.StatusOK, settings)
+}
+
+func UpdateSetting(c *gin.Context) {
+	var input SystemSetting
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	// Apenas atualiza o valor, key é fixa
+	var setting SystemSetting
+	if err := db.First(&setting, "key = ?", c.Param("key")).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Configuração não encontrada"})
+		return
+	}
+	setting.Value = input.Value
+	db.Save(&setting)
+	c.JSON(http.StatusOK, setting)
+}
+
 func GetCategories(c *gin.Context) {
 	var categories []ServiceCategory
 	if err := db.Preload("DefaultUser").Preload("EscalationUser").Find(&categories).Error; err != nil {
@@ -517,25 +744,75 @@ func DeleteCategory(c *gin.Context) {
 }
 
 func CreateTicket(c *gin.Context) {
-	var input Ticket
+	// Estrutura auxiliar para receber o JSON
+	var input struct {
+		Title       string `json:"title" binding:"required"`
+		Description string `json:"description" binding:"required"`
+		Priority    string `json:"priority"`
+		TicketType  string `json:"ticket_type"`
+		AssetID     *uint  `json:"asset_id"` // Opcional
+		CategoryID  *uint  `json:"category_id"`
+		RequesterID *uint  `json:"requester_id"` // Novo campo: se Tech abrir para User
+	}
+
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Associar ao criador atual
-	if userID, exists := c.Get("userID"); exists {
-		// O JWT retorna float64 para números numéricos genéricos em map claims
-		input.CreatorID = uint(userID.(float64))
+	ticket := Ticket{
+		Title:       input.Title,
+		Description: input.Description,
+		Priority:    input.Priority,
+		// TicketType removido pois nao existe na struct
+		AssetID:    input.AssetID,
+		CategoryID: input.CategoryID,
+		Status:     "Novo", // Sempre Novo
 	}
 
-	if result := db.Create(&input); result.Error != nil {
+	currentUserID := uint(0)
+	userRole := ""
+	if userID, exists := c.Get("userID"); exists {
+		currentUserID = uint(userID.(float64))
+	}
+	if role, exists := c.Get("role"); exists {
+		userRole = role.(string)
+	}
+
+	// Lógica para definir CreatorID
+	if userRole != "User" && input.RequesterID != nil && *input.RequesterID > 0 {
+		// Se for Tech/Admin e mandou RequesterID, usa ele
+		ticket.CreatorID = *input.RequesterID
+	} else {
+		// Senão, o criador é quem está logado
+		ticket.CreatorID = currentUserID
+	}
+
+	// Tentativa automática de atribuição (se categoria tiver default e não for o proprio criador técnico criando pra ele mesmo?)
+	// Se for Tech criando, talvez ele queira ja pegar?
+	// Por enquanto mantemos a lógica da categoria (Auto Assign)
+	var cat ServiceCategory
+	if ticket.CategoryID != nil {
+		if err := db.First(&cat, *ticket.CategoryID).Error; err == nil && cat.DefaultUserID > 0 {
+			ticket.AssignedToID = &cat.DefaultUserID
+		}
+	}
+
+	if result := db.Create(&ticket); result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
 		return
 	}
 
-	db.Preload("Asset").Preload("Creator").Preload("Category").Preload("AssignedTo").First(&input, input.ID)
-	c.JSON(http.StatusCreated, input)
+	db.Preload("Asset").Preload("Creator").Preload("Category").Preload("AssignedTo").First(&ticket, ticket.ID)
+
+	// Audit
+	details := fmt.Sprintf("Título: %s | Prio: %s", ticket.Title, ticket.Priority)
+	if ticket.CreatorID != currentUserID {
+		details += fmt.Sprintf(" | Aberto para ID: %d", ticket.CreatorID)
+	}
+	logAction(currentUserID, "CREATE", "Ticket", ticket.ID, details)
+
+	c.JSON(http.StatusCreated, ticket)
 }
 
 func GetTicketByID(c *gin.Context) {
@@ -580,6 +857,9 @@ func UpdateTicketStatus(c *gin.Context) {
 
 	ticket.Status = input.Status
 	db.Save(&ticket)
+
+	logAction(uid, "UPDATE", "Ticket", ticket.ID, fmt.Sprintf("Status alterado para %s", ticket.Status))
+
 	c.JSON(http.StatusOK, ticket)
 }
 
@@ -611,11 +891,37 @@ func AddComment(c *gin.Context) {
 
 func GetUsers(c *gin.Context) {
 	var users []User
+	// Retornar apenas campos seguros, ou toda struct (senha vai junto mas hasheada... ideal é DTO)
 	if err := db.Find(&users).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, users)
+}
+
+// Retorna lista simplificada para combobox (ID, FullName/Username) - Acessível para Tech
+func GetUsersSimple(c *gin.Context) {
+	type UserSimple struct {
+		ID       uint   `json:"id"`
+		FullName string `json:"full_name"`
+		Username string `json:"username"`
+	}
+	var users []User
+	var result []UserSimple
+
+	if err := db.Select("id, full_name, username").Find(&users).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	for _, u := range users {
+		name := u.FullName
+		if name == "" {
+			name = u.Username
+		}
+		result = append(result, UserSimple{ID: u.ID, FullName: name, Username: u.Username})
+	}
+	c.JSON(http.StatusOK, result)
 }
 
 func GetUserByID(c *gin.Context) {
@@ -731,6 +1037,9 @@ func DeleteUser(c *gin.Context) {
 // ==========================================
 
 func main() {
+	// "Go Horse" Mode: Produção Hardcoded
+	gin.SetMode(gin.ReleaseMode)
+
 	// Inicializa o banco de dados
 	initDB()
 
@@ -794,14 +1103,32 @@ func main() {
 			// Reports
 			secure.GET("/reports", GetReports)
 
-			// Users
-			secure.GET("/users", GetUsers)
-			secure.GET("/users/techs", GetTechs) // Rota para listar técnicos
-			secure.GET("/users/:id", GetUserByID)
-			// POST/DELETE movidos para grupo protegido acima
-			secure.PUT("/users/:id", UpdateUser) // Update tem proteção interna (self or admin)
+			// Audit (Admin only)
+			secure.GET("/audit", RoleMiddleware("Admin"), GetAuditLogs)
 
-			// Import (Movido para grupo protegido)
+			// Dashboard KPIs (Tech/Admin)
+			secure.GET("/dashboard/kpis", RoleMiddleware("Tech", "Admin"), GetDashboardStats)
+
+			// Users
+			// Users Routes
+			userGroup := secure.Group("/users")
+
+			// Rotas Específicas (Static)
+			// GET /users/techs (Public or Auth?) - Auth only (secure group)
+			userGroup.GET("/techs", GetTechs)
+
+			// GET /users/list (Tech/Admin)
+			userGroup.GET("/list", RoleMiddleware("Tech", "Admin"), GetUsersSimple)
+
+			// Rotas Parametrizadas (Dynamic)
+			userGroup.GET("/:id", GetUserByID)
+			userGroup.PUT("/:id", UpdateUser) // Validação interna de permissão
+
+			// Rotas Raiz (Root)
+			// GET /users/ (Admin only)
+			userGroup.GET("/", RoleMiddleware("Admin"), GetUsers)
+			// POST /users/ (Admin only)
+			userGroup.POST("/", RoleMiddleware("Admin"), CreateUser)
 
 			// Categories Management (Admin only)
 			secure.GET("/categories", GetCategories)
@@ -812,6 +1139,9 @@ func main() {
 				catGroup.PUT("/:id", UpdateCategory)
 				catGroup.DELETE("/:id", DeleteCategory)
 			}
+			// System Settings
+			secure.GET("/settings", GetSettings)
+			secure.PUT("/settings/:key", RoleMiddleware("Admin"), UpdateSetting)
 		}
 	}
 
@@ -849,6 +1179,82 @@ func main() {
 	}()
 
 	r.Run(":" + port)
+}
+
+// --- AUDIT HANDLERS ---
+
+func GetAuditLogs(c *gin.Context) {
+	var logs []AuditLog
+	query := db.Preload("User").Order("created_at desc").Limit(100)
+
+	if entity := c.Query("entity"); entity != "" {
+		query = query.Where("entity = ?", entity)
+	}
+	if action := c.Query("action"); action != "" {
+		query = query.Where("action = ?", action)
+	}
+
+	if err := query.Find(&logs).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao buscar logs"})
+		return
+	}
+	c.JSON(http.StatusOK, logs)
+}
+
+// --- DASHBOARD HANDLERS ---
+
+func GetDashboardStats(c *gin.Context) {
+	var stats struct {
+		OpenCount     int64 `json:"open"`
+		CriticalCount int64 `json:"critical"`
+		TodayCount    int64 `json:"today"`
+		SLABreach     int64 `json:"sla_breach"`
+	}
+
+	// 1. Abertos (Status != Resolvido, Fechado)
+	db.Model(&Ticket{}).Where("status NOT IN ?", []string{"Resolvido", "Fechado"}).Count(&stats.OpenCount)
+
+	// 2. Críticos (Priority = Alta AND Status != Resolvido/Fechado)
+	db.Model(&Ticket{}).Where("priority = ? AND status NOT IN ?", "Alta", []string{"Resolvido", "Fechado"}).Count(&stats.CriticalCount)
+
+	// 3. Abertos Hoje
+	db.Model(&Ticket{}).Where("created_at >= ?", time.Now().Format("2006-01-02 00:00:00")).Count(&stats.TodayCount)
+
+	// 4. SLA Violado (Calculado via SQL para precisão)
+	// Lógica: Se status aberto E now > (created_at + timeout).
+	// Como o timeout é dinâmico por categoria, isso é complexo em SQL puro simples.
+	// Vamos usar a aproximação de 4h padrão ou iterar se não for absurdo.
+	// Melhor: Query tickets abertos e checar Go-side para precisão máxima com a lógica do checkSLA
+
+	var openTickets []Ticket
+	db.Preload("Category").Where("status NOT IN ?", []string{"Resolvido", "Fechado"}).Find(&openTickets)
+
+	breachCount := 0
+	now := time.Now()
+	for _, t := range openTickets {
+		timeout := 4 // default
+		if t.Category != nil && t.Category.SLATimeout > 0 {
+			timeout = t.Category.SLATimeout
+		}
+		deadline := t.CreatedAt.Add(time.Duration(timeout) * time.Hour)
+		if now.After(deadline) {
+			breachCount++
+		}
+	}
+	stats.SLABreach = int64(breachCount)
+
+	// Buscar lista de críticos recentes para a lista
+	var criticalList []Ticket
+	db.Preload("Category").Preload("Creator").Preload("AssignedTo").
+		Where("status NOT IN ?", []string{"Resolvido", "Fechado"}).
+		Order("CASE WHEN priority = 'Alta' THEN 1 ELSE 2 END, created_at ASC").
+		Limit(10).
+		Find(&criticalList)
+
+	c.JSON(http.StatusOK, gin.H{
+		"stats":            stats,
+		"critical_tickets": criticalList,
+	})
 }
 
 // --- IMPORT HANDLERS ---
@@ -999,6 +1405,17 @@ type DailyTrend struct {
 }
 
 func GetReports(c *gin.Context) {
+	// Verificar Permissão Dinâmica para 'User'
+	role := c.MustGet("role").(string)
+	if role == "User" {
+		var setting SystemSetting
+		db.First(&setting, "key = ?", "user_view_reports")
+		if setting.Value != "true" {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Acesso negado a relatórios"})
+			return
+		}
+	}
+
 	var stats ReportStats
 	techID := c.Query("tech_id")
 

@@ -1,1 +1,23 @@
 @import "tailwindcss";
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-label, #printable-label * {
+    visibility: visible;
+  }
+  #printable-label {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border: none;
+  }
+  /* Ocultar elementos decorativos do modal ao imprimir */
+  .print\:hidden {
+    display: none !important;
+  }
+}

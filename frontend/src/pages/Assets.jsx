@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import {
     Plus, Search, Monitor, Trash2, Edit2, History, X,
-    Cpu, MapPin, DollarSign, FileText, CheckCircle, Smartphone, Download
+    Cpu, MapPin, DollarSign, FileText, CheckCircle, Smartphone, Download, Printer, QrCode
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { api } from '../services/api';
 
 const Tabs = ({ activeTab, setActiveTab }) => {
@@ -37,6 +38,8 @@ export default function Assets() {
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+    const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
+    const [labelAsset, setLabelAsset] = useState(null);
     const [activeTab, setActiveTab] = useState('general');
 
     // Form and History Data
@@ -93,6 +96,15 @@ export default function Assets() {
         } catch (error) {
             alert("Erro ao carregar histórico");
         }
+    };
+
+    const handleOpenLabel = (asset) => {
+        setLabelAsset(asset);
+        setIsLabelModalOpen(true);
+    };
+
+    const handlePrint = () => {
+        window.print();
     };
 
     const handleSubmit = async (e) => {
@@ -298,6 +310,9 @@ export default function Assets() {
                                             <button onClick={() => handleOpenHistory(asset)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-indigo-600 transition" title="Histórico">
                                                 <History className="w-4 h-4" />
                                             </button>
+                                            <button onClick={() => handleOpenLabel(asset)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-indigo-600 transition" title="Gerar Etiqueta">
+                                                <QrCode className="w-4 h-4" />
+                                            </button>
                                             <button onClick={() => handleEdit(asset)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-blue-600 transition" title="Editar">
                                                 <Edit2 className="w-4 h-4" />
                                             </button>
@@ -440,6 +455,44 @@ export default function Assets() {
                                 ))
                             )}
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Label Modal */}
+            {isLabelModalOpen && labelAsset && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl shadow-2xl p-8 max-w-sm w-full flex flex-col items-center gap-6 animate-fade-in print:shadow-none print:w-auto">
+                        <div className="flex justify-between w-full items-center print:hidden">
+                            <h3 className="text-lg font-bold text-slate-800">Etiqueta de Patrimônio</h3>
+                            <button onClick={() => setIsLabelModalOpen(false)}><X className="text-slate-400 w-5 h-5" /></button>
+                        </div>
+
+                        {/* Printable Area */}
+                        <div id="printable-label" className="printable-label border-2 border-slate-900 rounded-lg p-4 w-full flex flex-col items-center gap-2 bg-white text-slate-900">
+                            <div className="text-center border-b-2 border-slate-900 w-full pb-2 mb-1">
+                                <h2 className="text-xl font-bold uppercase tracking-wider">Câmara Municipal</h2>
+                                <p className="text-xs font-bold">Gestão de Patrimônio</p>
+                            </div>
+
+                            <div className="p-2 bg-white">
+                                <QRCodeSVG
+                                    value={`${window.location.origin}/tickets/new?asset_id=${labelAsset.id}`}
+                                    size={120}
+                                    level={"H"}
+                                />
+                            </div>
+
+                            <div className="text-center w-full">
+                                <div className="text-2xl font-black font-mono tracking-widest">{labelAsset.asset_tag || String(labelAsset.id).padStart(6, '0')}</div>
+                                <div className="text-sm font-semibold truncate max-w-[200px]">{labelAsset.hostname}</div>
+                                <div className="text-xs mt-1">{labelAsset.type} • {labelAsset.serial_number || 'Sem Serial'}</div>
+                            </div>
+                        </div>
+
+                        <button onClick={handlePrint} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition print:hidden">
+                            <Printer className="w-5 h-5" /> Imprimir Etiqueta
+                        </button>
                     </div>
                 </div>
             )}

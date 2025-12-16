@@ -40,7 +40,9 @@ export default function Tickets() {
 
     // History State for Suggestions
     const [sectorHistory, setSectorHistory] = useState([]);
+
     const [patrimonyHistory, setPatrimonyHistory] = useState([]);
+    const [usersList, setUsersList] = useState([]); // Para Techs selecionarem quem pediu
 
     // Form State
     const [formData, setFormData] = useState({
@@ -50,7 +52,8 @@ export default function Tickets() {
         asset_id: '',
         category_id: '',
         sector: '',
-        patrimony: ''
+        patrimony: '',
+        requester_id: '' // Novo campo
     });
 
     useEffect(() => {
@@ -75,6 +78,13 @@ export default function Tickets() {
             setTickets(Array.isArray(ticketsData) ? ticketsData : []);
             setAssets(Array.isArray(assetsData) ? assetsData : []);
             setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+
+            // Se for Tech ou Admin, carregar lista de usuários para seleção
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            if (user.role !== 'User') {
+                const usersData = await api.getUsersList();
+                setUsersList(Array.isArray(usersData) ? usersData : []);
+            }
         } catch (error) {
             console.error("Failed to load data", error);
         } finally {
@@ -88,7 +98,8 @@ export default function Tickets() {
             const payload = {
                 ...formData,
                 asset_id: formData.asset_id ? parseInt(formData.asset_id) : null,
-                category_id: formData.category_id ? parseInt(formData.category_id) : null
+                category_id: formData.category_id ? parseInt(formData.category_id) : null,
+                requester_id: formData.requester_id ? parseInt(formData.requester_id) : null,
             };
             await api.createTicket(payload);
 
@@ -311,10 +322,28 @@ export default function Tickets() {
                                 )}
                             </div>
 
+                            {/* Solicitante (Apenas para Tech/Admin) */}
+                            {userRole !== 'User' && (
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Solicitante (Usuário Final)</label>
+                                    <select
+                                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
+                                        value={formData.requester_id}
+                                        onChange={e => setFormData({ ...formData, requester_id: e.target.value })}
+                                    >
+                                        <option value="">-- Eu mesmo (Logado) --</option>
+                                        {usersList.map(u => (
+                                            <option key={u.id} value={u.id}>{u.full_name || u.username}</option>
+                                        ))}
+                                    </select>
+                                    <p className="text-xs text-slate-500 mt-1">Selecione se estiver abrindo chamado em nome de outra pessoa.</p>
+                                </div>
+                            )}
+
                             <div className="flex gap-3 pt-4">
                                 <button
                                     type="button"
-                                    onClick={() => setIsModalOpen(false)}
+                                    onClick={() => setIsModalNewOpen(false)}
                                     className="flex-1 px-4 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition"
                                 >
                                     Cancelar

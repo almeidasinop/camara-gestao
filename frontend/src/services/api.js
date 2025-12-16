@@ -58,13 +58,26 @@ export const api = {
     createCategory: (data) => request('/categories/', { method: 'POST', body: JSON.stringify(data) }),
     updateCategory: (id, data) => request(`/categories/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     deleteCategory: (id) => request(`/categories/${id}`, { method: 'DELETE' }),
+
+    // Settings
+    getSettings: () => request('/settings'),
+    updateSetting: (key, value) => request(`/settings/${key}`, { method: 'PUT', body: JSON.stringify({ value }) }),
+
+    // Audit/Dashboard
+    getAuditLogs: (filters) => {
+        const query = new URLSearchParams(filters).toString();
+        return request(`/audit?${query}`);
+    },
+    getDashboardKPIs: () => request('/dashboard/kpis'),
+
     createTicket: (data) => request('/tickets', { method: 'POST', body: JSON.stringify(data) }),
     updateTicketStatus: (id, status) => request(`/tickets/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
     addTicketComment: (id, content) => request(`/tickets/${id}/comments`, { method: 'POST', body: JSON.stringify({ content }) }),
     getReports: (techId) => request(`/reports${techId ? `?tech_id=${techId}` : ''}`),
 
     // Users
-    getUsers: () => request('/users'),
+    getUsers: () => request('/users/'),
+    getUsersList: () => request('/users/list'), // Tech Access
     getTechs: () => request('/users/techs'),
     getUser: (id) => request(`/users/${id}`),
     createUser: (data) => request('/users', { method: 'POST', body: JSON.stringify(data) }),

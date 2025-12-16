@@ -1,89 +1,38 @@
-Roadmap de Desenvolvimento: Sistema ITSM/ITAM em Go
+# Roadmap de Melhorias - Versão 2.0
 
-Este documento descreve as tarefas necessárias para evoluir o sistema de "Backend Simples" para um clone funcional do GLPI.
+Este documento lista as melhorias planejadas para elevar o nível do sistema CâmaraGestão, focando em segurança, performance e facilidade de uso em ambiente corporativo.
 
-🚀 Fase 1: Fundação (MVP)
+## 🚀 Prioridade Alta (Imediato)
 
-O objetivo desta fase é ter uma API funcional onde se possa criar, ler, atualizar e apagar (CRUD) os dados principais.
+- [x] **1. Otimização de Banco de Dados (SQLite WAL)**
+  - **Objetivo:** Evitar travamentos (database locked) em acessos simultâneos.
+  - **Ação:** Ativar o modo *Write-Ahead Logging* na string de conexão do GORM.
 
-[x] Configuração do Ambiente
+- [x] **2. Rotina de Backup Automática**
+  - **Objetivo:** Segurança dos dados sem depender de ação humana.
+  - **Ação:** Criar uma *goroutine* no Backend que copia o arquivo `glpi_clone.db` para a pasta `backups/` diariamente (ex: 03:00 AM) e rotaciona arquivos antigos (manter últimos 7 dias).
 
-[x] Inicializar módulo Go (go mod init).
+## ✨ Funcionalidades (Versão 2.1)
 
-[x] Configurar Gin (Web Framework) e GORM (ORM).
+- [x] **3. Etiquetas de Patrimônio com QR Code**
+  - **Objetivo:** Acelerar o acesso à informação do ativo e abertura de chamados.
+  - **Ação:**
+    - Criar endpoint no Frontend que gera uma etiqueta imprimível para um ativo selecionado.
+    - O QR Code deve levar para a URL: `/assets/{id}/view` ou `/tickets/new?asset_id={id}`.
 
-[x] Configurar SQLite para persistência de dados local.
+- [ ] **4. Autenticação AD/LDAP (Active Directory)**
+  - **Objetivo:** SSO (Single Sign-On) com a rede da Câmara.
+  - **Status:** *Parcialmente Iniciado (Backend stub)*.
+  - **Ação Restante:**
+    - [ ] **Configuração (Frontend/Settings):** Criar campos no menu Configurações para inserir: `LDAP Host`, `LDAP Port`, `Base DN`, `Bind User` e `Bind Password`.
+    - [ ] **Backend (Implementação Real):** Substituir a função mock `authenticateLDAP` no `main.go`. Implementar conexão real usando `go-ldap/ldap/v3`:
+        1. Conectar via TCP/TLS.
+        2. Realizar Bind com conta de serviço (se necessário) ou anônimo.
+        3. Buscar DN do usuário pelo `sAMAccountName` ou `uid`.
+        4. Tentar Bind com as credenciais do usuário.
+        5. Se sucesso: Sincronizar dados (Nome, Email) via JIT (já esboçado).
 
-[x] Módulo de Ativos (Assets/Inventory)
+## 🔮 Futuro (Concluídos em v2.2)
 
-[x] Criar Modelo Asset (ID, Hostname, IP, Tipo, Status).
-
-[x] Adicionar validação de campos (ex: IP válido, Hostname único).
-
-[x] Criar Endpoint PUT /assets/:id para atualizar equipamentos.
-
-[x] Criar Endpoint DELETE /assets/:id (Soft Delete - não apagar do banco, apenas marcar como inativo).
-
-[x] Módulo de Service Desk (Tickets)
-
-[x] Criar Modelo Ticket com relacionamento Foreign Key para Asset.
-
-[x] Implementar lógica de alteração de status (Novo -> Em Progresso -> Fechado).
-
-[x] Adicionar campo de "Comentários" ou "Follow-ups" no ticket.
-
-🛠 Fase 2: Regras de Negócio e Conexões
-
-Adicionar inteligência ao sistema para que não seja apenas um banco de dados glorificado.
-
-[ ] Gestão de Inventário Avançada
-
-[x] Implementar histórico de alterações (Log de quem mudou o quê no equipamento).
-
-[ ] Adicionar gestão de "Componentes" (ex: adicionar RAM ou HD a um Computador).
-
-[ ] Criar rotina de "Scan Simulado": Um endpoint que recebe um JSON de um agente e atualiza o ativo automaticamente.
-
-[ ] SLA e Automação de Tickets
-
-[x] Calcular automaticamente a data de vencimento (Due Date) baseada na prioridade.
-
-[ ] Impedir o fecho de um ticket se não houver uma "Solução" descrita.
-
-💻 Fase 3: Frontend e Consumo
-
-Criar a interface visual para o utilizador final e técnicos.
-
-[x] Desenvolvimento Frontend (React ou Vue)
-
-[x] Criar Dashboard com contadores (Tickets Abertos, Ativos por Tipo).
-
-[x] Criar Tabela de Ativos com filtros e busca.
-
-[ ] Visualizar Histórico de Alterações de Ativos (Frontend).
-
-[x] Criar Formulário de Abertura de Chamados.
-
-[x] Integração
-
-[x] Configurar CORS no Backend Go para aceitar requisições do Frontend.
-
-[x] Implementar autenticação JWT (Login de técnicos).
-
-📊 Fase 4: DevOps e Performance
-
-Preparar a aplicação para o mundo real.
-
-[ ] Banco de Dados
-
-[ ] Migrar de SQLite para PostgreSQL via configuração de ambiente.
-
-[ ] Dockerização
-
-[ ] Criar Dockerfile multi-stage (Build em Go -> Imagem Alpine leve).
-
-[ ] Criar docker-compose.yml para subir App + Banco.
-
-[ ] Testes
-
-[ ] Escrever testes unitários para os Handlers (go test).
+- [x] **Auditoria Completa (Logs)**: Implementado sistema de logs (`/audit`) e página de visualização.
+- [x] **Dashboard TV**: Modo "quiosque" (`/tv`) implementado com rotação automática e KPIs em tempo real.

@@ -10,6 +10,9 @@ export default function Settings() {
     const [techs, setTechs] = useState([]);
     const [userRole, setUserRole] = useState('');
 
+    // System Settings State
+    const [systemSettings, setSystemSettings] = useState([]);
+
     // Category Modal State
     const [isCatModalOpen, setIsCatModalOpen] = useState(false);
     const [editingCategory, setEditingCategory] = useState(null); // If null, create mode
@@ -22,19 +25,21 @@ export default function Settings() {
         setSectors(JSON.parse(localStorage.getItem('ticket_sectors') || '[]'));
         setPatrimonies(JSON.parse(localStorage.getItem('ticket_patrimonies') || '[]'));
 
-        if (user.role === 'Admin') {
+        if (userRole === 'Admin') {
             loadAdminData();
         }
-    }, []);
+    }, [userRole]);
 
     const loadAdminData = async () => {
         try {
-            const [cats, techList] = await Promise.all([
+            const [cats, techList, settingsData] = await Promise.all([
                 api.getCategories(),
-                api.getTechs()
+                api.getTechs(),
+                api.getSettings()
             ]);
             setCategories(cats || []);
             setTechs(techList || []);
+            setSystemSettings(settingsData || []);
         } catch (e) {
             console.error("Failed load settings data", e);
         }
@@ -86,6 +91,17 @@ export default function Settings() {
             loadAdminData();
         } catch (e) {
             alert("Erro ao deletar");
+        }
+    };
+
+    const handleToggleSetting = async (key, currentValue) => {
+        const newValue = currentValue === 'true' ? 'false' : 'true';
+        try {
+            await api.updateSetting(key, newValue);
+            // Optimistic update
+            setSystemSettings(systemSettings.map(s => s.key === key ? { ...s, value: newValue } : s));
+        } catch (e) {
+            alert("Erro ao alterar configuração");
         }
     };
 
@@ -235,6 +251,27 @@ export default function Settings() {
                 </div>
             )}
 
+            <div className="space-y-4">
+                {systemSettings.map(setting => (
+                    <div key={setting.key} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
+                        <div>
+                            <h4 className="font-medium text-slate-900 dark:text-white">{setting.description}</h4>
+                            <p className="text-xs text-slate-500 font-mono mt-1">{setting.key}</p>
+                        </div>
+                        <button
+                            onClick={() => handleToggleSetting(setting.key, setting.value)}
+                            className={`relative w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${setting.value === 'true' ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'
+                                }`}
+                        >
+                            <span
+                                className={`absolute left-0.5 top-0.5 block w-5 h-5 rounded-full bg-white shadow transform transition-transform duration-200 ${setting.value === 'true' ? 'translate-x-6' : 'translate-x-0'
+                                    }`}
+                            />
+                        </button>
+                    </div>
+                ))}
+                {systemSettings.length === 0 && <p className="text-slate-500 text-sm">Carregando permissões...</p>}
+            </div>
             {/* Config Modal */}
             {isCatModalOpen && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -287,7 +324,7 @@ export default function Settings() {
             )}
 
             {/* Dados e Armazenamento */}
-            <div className="bg-white dark:bg-slate-950 p-6 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
+            <div className="bg-white dark:bg-slate-950 p-6 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm mt-8">
                 <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
                     <Database className="w-5 h-5 text-emerald-500" /> Dados do Sistema
                 </h3>
@@ -342,3 +379,4 @@ export default function Settings() {
         </div>
     );
 }
+

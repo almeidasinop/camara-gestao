@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Monitor, Ticket, Settings, Menu, X, Users, Camera, PieChart } from 'lucide-react';
+import { NavLink, Outlet, useLocation, Link, useNavigate } from 'react-router-dom';
+import {
+    LayoutDashboard, Ticket, Monitor, Users, Settings, Menu, X, LogOut, Moon, Sun, FileText,
+    Shield, Tv, Camera, PieChart
+} from 'lucide-react';
 import clsx from 'clsx';
 import { api } from './services/api';
 
@@ -155,7 +158,22 @@ export default function Layout() {
                     )}
 
                     {user.role !== 'User' && (
-                        <SidebarItem to="/settings" icon={Settings} label="Configurações" collapsed={collapsed && !mobileMenuOpen} />
+                        <>
+                            <div className="my-2 border-t border-slate-100 dark:border-slate-800" />
+                            <SidebarItem to="/audit" icon={Shield} label="Auditoria" collapsed={collapsed && !mobileMenuOpen} />
+
+                            <a
+                                href="/tv"
+                                target="_blank"
+                                className={`flex items-center gap-3 px-4 py-3 mx-2 rounded-lg transition-colors font-medium mb-1 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900 group`}
+                                title="Modo TV"
+                            >
+                                <Tv className="w-5 h-5 flex-shrink-0 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" />
+                                {(!collapsed || mobileMenuOpen) && <span className="group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">Modo TV</span>}
+                            </a>
+
+                            <SidebarItem to="/settings" icon={Settings} label="Configurações" collapsed={collapsed && !mobileMenuOpen} />
+                        </>
                     )}
                 </nav>
 

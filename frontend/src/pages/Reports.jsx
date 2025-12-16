@@ -119,7 +119,7 @@ export default function Reports() {
                 <div className="bg-white dark:bg-slate-950 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
                     <h3 className="font-bold text-lg mb-6 text-slate-800 dark:text-white">Top Ofensores por Categoria</h3>
                     <div className="h-64">
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="99%" height="100%" minWidth={0}>
                             <BarChart data={categoryData} layout="vertical" margin={{ left: 40 }}>
                                 <XAxis type="number" hide />
                                 <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 12 }} />
@@ -134,7 +134,7 @@ export default function Reports() {
                 <div className="bg-white dark:bg-slate-950 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
                     <h3 className="font-bold text-lg mb-6 text-slate-800 dark:text-white">Volume de Chamados (Últimos 7 dias)</h3>
                     <div className="h-64">
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="99%" height="100%" minWidth={0}>
                             <LineChart data={trendData}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                                 <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} dy={10} />

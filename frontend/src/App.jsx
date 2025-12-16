@@ -9,6 +9,8 @@ import Tickets from './pages/Tickets';
 import Users from './pages/Users';
 import Settings from './pages/Settings';
 import Reports from './pages/Reports';
+import AuditLogs from './pages/Audit';
+import TvDashboard from './pages/TvDashboard';
 
 // Componente para rotas protegidas
 const PrivateRoute = ({ children }) => {
@@ -21,6 +23,8 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        {/* Rota TV Dashboard (Fora do Layout padrão, tipo Kiosk) */}
+        <Route path="/tv" element={<TvDashboard />} />
 
         <Route path="/" element={
           <PrivateRoute>
@@ -32,6 +36,8 @@ function App() {
           <Route path="tickets" element={<Tickets />} />
           <Route path="users" element={<Users />} />
           <Route path="reports" element={<Reports />} />
+          <Route path="reports" element={<Reports />} />
+          <Route path="audit" element={<AuditLogs />} />
           <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>
