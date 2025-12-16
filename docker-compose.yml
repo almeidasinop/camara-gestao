@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: camara_gestao
+    restart: always
+    ports:
+      - "80:8080" # Expõe a porta 8080 do container na porta 80 do host
+    volumes:
+      - ./data:/app/data # Persistência do banco de dados na pasta local 'data'
+    environment:
+      - DB_PATH=/app/data/glpi_clone.db
+      - PORT=8080
