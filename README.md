@@ -23,14 +23,22 @@ Sistema moderno e simplificado para gestão de ativos de TI e chamados de suport
 
 ### 📊 Relatórios Inteligentes
 - **Dashboard Executivo:** Métricas em tempo real (MTTR, Aderência ao SLA, Volume).
+- **Modo TV (Kiosk):** Dashboard `/tv` escuro de alto contraste para exibição em monitores de departamento, com auto-refresh.
 - **Tendências:** Gráficos de volume semanal e "Top Ofensores" por setor/categoria.
 - **Feedback:** Monitoramento de satisfação (CSAT).
 
-### ⚙️ Administração
-- Controle granular de permissões (Admin, Técnico, Usuário).
-- Configuração de Categorias de Serviço e regras de SLA.
-- Backup e Restauração de dados via interface.
-- Auditoria de ações.
+### 🏷️ Etiquetas Inteligentes
+- Geração automática de Etiquetas Patrimoniais via sistema.
+- QR Code integrado que redireciona para detalhes do ativo ou abertura rápida de chamado.
+- Layout otimizado para impressoras térmicas.
+
+### ⚙️ Administração & Segurança
+- **Controle de Acesso:** RBAC (Role-Based Access Control) para Admin, Tech e User.
+- **Configuração Global:** Gestão de SLA, Categorias e Responsáveis.
+- **Backup Automático:** Rotina noturna de backup com retenção, protegendo o banco SQLite.
+- **Performance:** Banco otimizado com modo WAL (Write-Ahead Logging) para alta concorrência.
+- **Auditoria:** Logs detalhados de todas as ações críticas (`/audit`).
+- **Backup Manual:** Endpoint para download/restore (em desenvolvimento).
 
 ## 🛠️ Tecnologias Utilizadas
 
