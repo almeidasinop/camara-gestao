@@ -345,28 +345,41 @@ func initDB() {
 }
 
 func seedDatabase() {
+	fmt.Println("[SEED] Iniciando seed do banco de dados...")
+
 	// 1. Criar Usuário Admin
 	var count int64
 	db.Model(&User{}).Count(&count)
+	fmt.Printf("[SEED] Total de usuários encontrados: %d\n", count)
+
 	if count == 0 {
+		fmt.Println("[SEED] Criando usuário admin padrão...")
 		createSeedUser("admin", "Admin", "Administrador")
+	} else {
+		fmt.Println("[SEED] Usuários já existem, pulando criação do admin")
 	}
 
 	// 2. Criar Técnicos Específicos (Mauro, André, Carlos)
+	fmt.Println("[SEED] Criando técnicos padrão...")
 	mauro := createSeedUser("mauro", "Tech", "Mauro (Redes)")
 	andre := createSeedUser("andre", "Tech", "André (Hardware)")
 	carlos := createSeedUser("carlos", "Tech", "Carlos (Softwares)")
 
 	// 3. Criar Categorias de Serviço Iniciais
+	fmt.Println("[SEED] Criando categorias de serviço...")
 	seedCategory("Redes e Telefonia", mauro.ID)
 	seedCategory("Informática e Impressoras", andre.ID)
 	seedCategory("Softwares e Sistemas", carlos.ID)
-	seedCategory("Patrimônio e Mobiliário", mauro.ID) // Exemplo: Mauro assume se não tiver outro definido, ou pode ser outro
+	seedCategory("Patrimônio e Mobiliário", mauro.ID)
+
+	fmt.Println("[SEED] Seed concluído com sucesso!")
 }
 
 func createSeedUser(username, role, fullName string) User {
+	fmt.Printf("[SEED] Tentando criar usuário: %s (role: %s)\n", username, role)
 	var user User
 	if err := db.Where("username = ?", username).First(&user).Error; err != nil {
+		fmt.Printf("[SEED] Usuário %s não existe, criando...\n", username)
 		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("123456"), bcrypt.DefaultCost)
 		user = User{
 			Username: username,
@@ -374,8 +387,13 @@ func createSeedUser(username, role, fullName string) User {
 			Role:     role,
 			FullName: fullName,
 		}
-		db.Create(&user)
-		fmt.Printf("Usuário criado: %s\n", username)
+		if err := db.Create(&user).Error; err != nil {
+			fmt.Printf("[SEED] ERRO ao criar usuário %s: %v\n", username, err)
+		} else {
+			fmt.Printf("[SEED] ✓ Usuário criado: %s (ID: %d)\n", username, user.ID)
+		}
+	} else {
+		fmt.Printf("[SEED] Usuário %s já existe (ID: %d), pulando...\n", username, user.ID)
 	}
 	return user
 }
@@ -1066,8 +1084,10 @@ func main() {
 	// Grupo de rotas da API
 	api := r.Group("/api/v1")
 	{
-		// Rota Pública
+		// Rotas Públicas
 		api.POST("/login", Login)
+		api.GET("/debug/users", DebugUsers)        // Diagnóstico: listar usuários
+		api.POST("/setup/init", SetupInitialAdmin) // Setup: criar admin inicial
 
 		// (Handlers movidos para o final do arquivo)
 		// Rotas Protegidas
@@ -1627,5 +1647,61 @@ func TriggerUpdate(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Atualização solicitada com sucesso. O sistema buscará a nova versão e reiniciará em instantes.",
+	})
+}
+
+// DebugUsers - Endpoint de diagnóstico para verificar usuários no banco
+func DebugUsers(c *gin.Context) {
+	var users []User
+	var count int64
+
+	db.Model(&User{}).Count(&count)
+	db.Select("id, username, role, full_name, created_at").Find(&users)
+
+	c.JSON(http.StatusOK, gin.H{
+		"total": count,
+		"users": users,
+	})
+}
+
+// SetupInitialAdmin - Cria o usuário admin inicial (apenas se não houver usuários)
+func SetupInitialAdmin(c *gin.Context) {
+	var count int64
+	db.Model(&User{}).Count(&count)
+
+	if count > 0 {
+		c.JSON(http.StatusConflict, gin.H{
+			"error":       "Sistema já possui usuários cadastrados. Use o login normal.",
+			"total_users": count,
+		})
+		return
+	}
+
+	// Criar admin com senha padrão
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao gerar senha"})
+		return
+	}
+
+	admin := User{
+		Username: "admin",
+		Password: string(hashedPassword),
+		Role:     "Admin",
+		FullName: "Administrador",
+	}
+
+	if err := db.Create(&admin).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Erro ao criar usuário admin: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"message":  "Usuário admin criado com sucesso!",
+		"username": "admin",
+		"password": "admin123",
+		"note":     "Por favor, altere a senha após o primeiro login.",
 	})
 }

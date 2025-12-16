@@ -45,17 +45,17 @@ export default function Layout() {
     const [profileData, setProfileData] = useState({ fullName: '', avatar: '', password: '' });
 
     const handleOpenProfile = async () => {
-        // Tentar pegar ID do token
-        const token = localStorage.getItem('token');
-        if (!token) return;
+        // Pegar ID do usuário do localStorage (mais simples e confiável)
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        if (!user.id) {
+            alert('Erro: ID do usuário não encontrado');
+            return;
+        }
 
         try {
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            const userId = payload.sub;
-
-            const userData = await api.getUser(userId);
+            const userData = await api.getUser(user.id);
             setProfileData({
-                id: userId,
+                id: user.id,
                 fullName: userData.full_name || '',
                 avatar: userData.avatar || '',
                 password: ''
@@ -193,6 +193,22 @@ export default function Layout() {
                             <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">{user.full_name || user.username}</span>
                             <span className="text-xs text-slate-500 truncate">{user.role}</span>
                         </div>
+                    )}
+                </button>
+
+                {/* Botão de Logout */}
+                <button
+                    onClick={() => {
+                        if (window.confirm('Deseja realmente sair do sistema?')) {
+                            localStorage.clear();
+                            window.location.href = '/login';
+                        }
+                    }}
+                    className="w-full p-4 border-t border-slate-100 dark:border-slate-800 flex items-center gap-3 hover:bg-red-50 dark:hover:bg-red-900/20 transition text-left cursor-pointer text-red-600 dark:text-red-400"
+                >
+                    <LogOut className="w-5 h-5 flex-shrink-0" />
+                    {(!collapsed || mobileMenuOpen) && (
+                        <span className="font-medium">Sair</span>
                     )}
                 </button>
             </aside>

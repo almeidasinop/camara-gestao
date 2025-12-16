@@ -2,8 +2,9 @@
 
 Sistema moderno e simplificado para gestão de ativos de TI e chamados de suporte (Helpdesk), desenvolvido especificamente para atender às necessidades da Câmara Municipal.
 
-![Status do Projeto](https://img.shields.io/badge/Status-Em_Desenvolvimento-blue)
-![Tech Stack](https://img.shields.io/badge/Stack-Go_Ext_+_React-cyan)
+![Status do Projeto](https://img.shields.io/badge/Status-Produção-green)
+![Tech Stack](https://img.shields.io/badge/Stack-Go_+_React-cyan)
+![Docker](https://img.shields.io/badge/Docker-Ready-blue)
 
 ## 🚀 Funcionalidades
 
@@ -12,13 +13,14 @@ Sistema moderno e simplificado para gestão de ativos de TI e chamados de suport
 - Histórico de movimentações e alterações.
 - Vinculação de ativos a usuários e setores.
 - Importação em massa via CSV.
+- **Geração de Etiquetas com QR Code** para identificação rápida.
 
 ### 🎫 Helpdesk (Chamados)
 - Abertura de chamados por usuários ou técnicos.
-- **Fluxo de Trabalho ITIL Simplificado:** Novo -> Em Atendimento -> Resolvido -> Fechado.
+- **Fluxo de Trabalho ITIL Simplificado:** Novo → Em Atendimento → Resolvido → Fechado.
 - **SLA Dinâmico:** Monitoramento automático de prazos por categoria de serviço.
 - **Matriz de Escalonamento:** Redirecionamento automático para supervisores em caso de atraso.
-- chat/timeline interno para registrar soluções e interagir com o usuário.
+- Chat/timeline interno para registrar soluções e interagir com o usuário.
 - Filtros avançados e separação de visibilidade (Técnicos só veem o que é relevante).
 
 ### 📊 Relatórios Inteligentes
@@ -34,19 +36,27 @@ Sistema moderno e simplificado para gestão de ativos de TI e chamados de suport
 
 ### ⚙️ Administração & Segurança
 - **Controle de Acesso:** RBAC (Role-Based Access Control) para Admin, Tech e User.
+- **Autenticação JWT:** Login seguro com tokens de sessão.
+- **Logout Funcional:** Botão de sair com limpeza completa de sessão.
+- **Edição de Perfil:** Usuários podem editar nome, avatar e senha.
 - **Configuração Global:** Gestão de SLA, Categorias e Responsáveis.
-- **Backup Automático:** Rotina noturna de backup com retenção, protegendo o banco SQLite.
+- **Backup Automático:** Rotina diária de backup com retenção de 7 dias, protegendo o banco SQLite.
 - **Performance:** Banco otimizado com modo WAL (Write-Ahead Logging) para alta concorrência.
 - **Auditoria:** Logs detalhados de todas as ações críticas (`/audit`).
-- **Backup Manual:** Endpoint para download/restore (em desenvolvimento).
+- **Atualização via Web:** Botão no painel admin para atualizar o sistema remotamente.
+
+### 🔧 Endpoints de Diagnóstico
+- **`/api/v1/debug/users`**: Lista todos os usuários (para troubleshooting).
+- **`/api/v1/setup/init`**: Cria usuário admin inicial se o banco estiver vazio.
 
 ## 🛠️ Tecnologias Utilizadas
 
 ### Backend
-- **Linguagem:** Go (Golang) 1.21+
+- **Linguagem:** Go (Golang) 1.23+
 - **Framework Web:** Gin Gonic
-- **Banco de Dados:** SQLite (com GORM) - Robusto, portátil e sem necessidade de servidor SQL dedicado.
+- **Banco de Dados:** SQLite com `glebarez/sqlite` (Pure Go, sem CGO) - Robusto, portátil e sem necessidade de servidor SQL dedicado.
 - **Autenticação:** JWT (JSON Web Tokens).
+- **ORM:** GORM.
 
 ### Frontend
 - **Framework:** React 18 (Vite)
@@ -54,14 +64,54 @@ Sistema moderno e simplificado para gestão de ativos de TI e chamados de suport
 - **Ícones:** Lucide React.
 - **Gráficos:** Recharts.
 
-## 📦 Instalação e Execução Local
+## 📦 Instalação e Execução
 
-### Pré-requisitos
-- [Go](https://go.dev/dl/) instalado.
-- [Node.js](https://nodejs.org/) instalado.
+### 🐳 Opção 1: Docker (Recomendado)
+
+#### Pré-requisitos
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado.
 - Git.
 
-### Passos
+#### Passos
+
+1. **Clone o repositório**
+   ```bash
+   git clone https://github.com/almeidasinop/camara-gestao.git
+   cd camara-gestao
+   ```
+
+2. **Execute o script de inicialização**
+   ```powershell
+   # Windows (PowerShell)
+   .\run_docker.ps1
+   ```
+   
+   Ou manualmente:
+   ```bash
+   # Linux/Mac
+   docker compose up -d --build
+   ```
+
+3. **Acesse o sistema**
+   - Abra `http://localhost:8080` no navegador
+   - **Login padrão:** `admin` / `123456`
+
+#### Atualização do Sistema
+```powershell
+# Windows
+.\update.sh
+
+# Ou via painel admin (botão "Atualizar Agora" em Configurações)
+```
+
+### 💻 Opção 2: Desenvolvimento Local
+
+#### Pré-requisitos
+- [Go 1.23+](https://go.dev/dl/) instalado.
+- [Node.js 18+](https://nodejs.org/) instalado.
+- Git.
+
+#### Passos
 
 1. **Clone o repositório**
    ```bash
@@ -87,7 +137,20 @@ Sistema moderno e simplificado para gestão de ativos de TI e chamados de suport
    ```
    Acesse `http://localhost:5173` no navegador.
 
-## 🐳 Deploy (Docker / Proxmox)
+## 🔐 Credenciais Padrão
+
+Após a primeira instalação, o sistema cria automaticamente:
+
+| Usuário | Senha | Role |
+|---------|-------|------|
+| admin | 123456 | Admin |
+| mauro | 123456 | Tech |
+| andre | 123456 | Tech |
+| carlos | 123456 | Tech |
+
+**⚠️ IMPORTANTE:** Altere as senhas padrão após o primeiro acesso!
+
+## 🚀 Deploy em Produção (Proxmox/Linux)
 
 Este projeto contém scripts para implantação rápida em containers Docker, ideal para ambientes de produção em Proxmox ou servidores Linux.
 
@@ -98,9 +161,68 @@ Veja o guia detalhado em: [INSTRUCOES_PROXMOX.md](INSTRUCOES_PROXMOX.md)
 # No servidor
 git clone https://github.com/almeidasinop/camara-gestao.git
 cd camara-gestao
-chmod +x deploy.sh
+chmod +x deploy.sh update.sh monitor_update.sh
 ./deploy.sh
+
+# Para atualizações futuras
+./update.sh
+
+# Ou configure o monitor automático
+nohup ./monitor_update.sh &
 ```
 
+## 📁 Estrutura de Dados
+
+Os dados são persistidos em:
+- **Desenvolvimento:** `./glpi_clone.db` (raiz do projeto)
+- **Docker:** `./data/glpi_clone.db` (volume persistente)
+- **Backups:** `./data/backups/` (retenção de 7 dias)
+
+## 🔧 Variáveis de Ambiente
+
+| Variável | Padrão | Descrição |
+|----------|--------|-----------|
+| `PORT` | 8080 | Porta do servidor backend |
+| `DB_PATH` | glpi_clone.db | Caminho do banco SQLite |
+| `BACKUP_DIR` | backups | Diretório de backups |
+
+## 🆘 Troubleshooting
+
+### Problema: Login não funciona
+**Solução:** Limpe o localStorage do navegador:
+```javascript
+// Console do navegador (F12)
+localStorage.clear();
+location.reload();
+```
+
+### Problema: Configurações vazias
+**Solução:** Faça logout e login novamente para recarregar os dados do usuário.
+
+### Problema: Banco vazio após instalação
+**Solução:** Use o endpoint de setup:
+```bash
+curl -X POST http://localhost:8080/api/v1/setup/init
+```
+
+## 📝 Changelog
+
+### v1.1.0 (2025-12-16)
+- ✅ Adicionado botão de Logout funcional
+- ✅ Corrigido salvamento de dados do usuário no localStorage
+- ✅ Corrigido carregamento de configurações para Admin
+- ✅ Adicionado endpoint `/api/v1/debug/users` para diagnóstico
+- ✅ Adicionado endpoint `/api/v1/setup/init` para setup inicial
+- ✅ Corrigida edição de perfil do usuário
+- ✅ Melhorado suporte a Docker com build otimizado
+- ✅ Adicionados scripts `run_docker.ps1` e `update.sh`
+- ✅ Implementado sistema de atualização via painel web
+
+### v1.0.0 (2025-12-15)
+- 🎉 Lançamento inicial com todas as funcionalidades core
+
 ## 🔒 Licença
-Proprietário. Uso interno.
+Proprietário. Uso interno da Câmara Municipal.
+
+## 👥 Suporte
+Para dúvidas ou problemas, entre em contato com a equipe de TI.

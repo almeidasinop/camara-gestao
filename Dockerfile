@@ -9,13 +9,12 @@ RUN npm run build
 # Estágio 2: Build do Backend
 FROM golang:1.23-alpine AS backend-builder
 WORKDIR /app
-# Instalar build-base para CGO (necessário para go-sqlite3)
-RUN apk add --no-cache build-base
+# glebarez/sqlite é pure Go, não precisa de gcc/build-base
 COPY go.mod go.sum ./
-RUN go mod download
+COPY vendor ./vendor
 COPY *.go ./
-# Build estático com suporte a CGO
-RUN CGO_ENABLED=1 GOOS=linux go build -a -ldflags '-linkmode external -extldflags "-static"' -o server .
+# Build Pure Go
+RUN CGO_ENABLED=0 GOOS=linux go build -mod=vendor -o server .
 
 # Estágio 3: Imagem Final
 FROM alpine:latest

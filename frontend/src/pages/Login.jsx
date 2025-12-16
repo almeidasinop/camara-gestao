@@ -16,11 +16,14 @@ export default function Login() {
 
         try {
             const data = await api.login(credentials);
-            if (data.token) {
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('user', JSON.stringify({ username: data.username, role: data.role }));
+            console.log('[Login] Resposta da API:', data);
 
-                if (data.role === 'User') {
+            if (data.token && data.user) {
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('user', JSON.stringify(data.user));
+                console.log('[Login] Usuário salvo no localStorage:', data.user);
+
+                if (data.user.role === 'User') {
                     navigate('/tickets');
                 } else {
                     navigate('/');
