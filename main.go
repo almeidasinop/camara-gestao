@@ -1003,6 +1003,17 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 
+	fmt.Printf("[UpdateUser] Atualizando usuário ID %d. Dados recebidos: Role=%s, FullName=%s, Password=%s (len=%d)\n",
+		user.ID, input.Role, input.FullName,
+		func() string {
+			if input.Password != "" {
+				return "***"
+			} else {
+				return "(vazio)"
+			}
+		}(),
+		len(input.Password))
+
 	// Permitir se for Admin OU se for o próprio usuário
 	currentUserID, _ := c.Get("userID")
 	role, _ := c.Get("role")
@@ -1018,12 +1029,23 @@ func UpdateUser(c *gin.Context) {
 
 	// Apenas Admin pode mudar Role
 	if input.Role != "" && isAdmin {
+		fmt.Printf("[UpdateUser] Alterando role de %s para %s\n", user.Role, input.Role)
 		user.Role = input.Role
 	}
 
-	if input.Password != "" {
-		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
+	// Atualizar senha apenas se não estiver vazia
+	if input.Password != "" && len(input.Password) > 0 {
+		fmt.Printf("[UpdateUser] Atualizando senha do usuário %s\n", user.Username)
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
+		if err != nil {
+			fmt.Printf("[UpdateUser] ERRO ao gerar hash da senha: %v\n", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao processar senha"})
+			return
+		}
 		user.Password = string(hashedPassword)
+		fmt.Printf("[UpdateUser] Senha atualizada com sucesso (hash: %d bytes)\n", len(user.Password))
+	} else {
+		fmt.Printf("[UpdateUser] Senha não foi alterada (campo vazio ou não enviado)\n")
 	}
 
 	if input.FullName != "" {
@@ -1034,7 +1056,21 @@ func UpdateUser(c *gin.Context) {
 		user.Avatar = input.Avatar
 	}
 
-	db.Save(&user)
+	if err := db.Save(&user).Error; err != nil {
+		fmt.Printf("[UpdateUser] ERRO ao salvar no banco: %v\n", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao salvar usuário"})
+		return
+	}
+
+	fmt.Printf("[UpdateUser] Usuário %s atualizado com sucesso\n", user.Username)
+
+	// Log de auditoria
+	details := fmt.Sprintf("Atualizado: FullName=%s", user.FullName)
+	if input.Password != "" {
+		details += " | Senha alterada"
+	}
+	logAction(user.ID, "UPDATE", "User", user.ID, details)
+
 	c.JSON(http.StatusOK, user)
 }
 

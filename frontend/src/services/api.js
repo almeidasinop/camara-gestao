@@ -1,4 +1,5 @@
-const API_URL = 'http://localhost:8080/api/v1';
+// Detecta automaticamente o host (funciona tanto em localhost quanto em rede)
+const API_URL = `${window.location.protocol}//${window.location.hostname}:8080/api/v1`;
 
 const getHeaders = () => {
     const token = localStorage.getItem('token');
