@@ -207,6 +207,9 @@ curl -X POST http://localhost:8080/api/v1/setup/init
 
 ## 📝 Changelog
 
+### v1.1.1 (2025-12-16)
+- 🐛 **Hotfix Crítico:** Corrigido bloqueio de CORS que impedia login em IPs diferentes de localhost. Agora a API aceita requisições de qualquer origem na rede, mantendo suporte a credenciais.
+
 ### v1.1.0 (2025-12-16)
 - ✅ Adicionado botão de Logout funcional
 - ✅ Corrigido salvamento de dados do usuário no localStorage
