@@ -137,6 +137,21 @@ Sistema moderno e simplificado para gestão de ativos de TI e chamados de suport
    ```
    Acesse `http://localhost:5173` no navegador.
 
+### 🚀 Opção 3: Deploy Super Rápido (Imagem Pronta)
+
+Ideal para produção, sem necessidade de compilar código.
+
+1. **Baixe apenas o arquivo de composição:**
+   ```bash
+   curl -O https://raw.githubusercontent.com/almeidasinop/camara-gestao/master/docker-compose.prod.yml
+   mv docker-compose.prod.yml docker-compose.yml
+   ```
+
+2. **Suba o serviço:**
+   ```bash
+   docker compose up -d
+   ```
+
 ## 🔐 Credenciais Padrão
 
 Após a primeira instalação, o sistema cria automaticamente:
