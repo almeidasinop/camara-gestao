@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Monitor, AlertCircle, CheckCircle, Server, Ticket } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { Monitor, AlertCircle, CheckCircle, Server, Ticket, Bell } from 'lucide-react';
 import { api } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 
@@ -32,41 +32,107 @@ const Dashboard = () => {
     const [recentTickets, setRecentTickets] = useState([]);
     const [userRole, setUserRole] = useState('');
 
-    useEffect(() => {
-        const loadDashboardData = async () => {
-            const user = JSON.parse(localStorage.getItem('user') || '{}');
-            setUserRole(user.role);
+    // Ref para rastrear o ID do chamado mais recente e evitar som no load inicial
+    const lastLatestTicketId = useRef(0);
 
-            try {
-                const [assets, tickets] = await Promise.all([
-                    api.getAssets(),
-                    api.getTickets()
-                ]);
+    const playNotificationSound = () => {
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
 
-                const assetList = Array.isArray(assets) ? assets : [];
-                const ticketList = Array.isArray(tickets) ? tickets : [];
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
 
-                setStats({
-                    assets: assetList.length,
-                    tickets: ticketList.length,
-                    openTickets: ticketList.filter(t => t.status !== 'Resolvido' && t.status !== 'Fechado').length,
-                    resolvedTickets: ticketList.filter(t => t.status === 'Resolvido').length,
-                    servers: assetList.filter(a => a.type === 'Server').length
-                });
+            // Melodia suave (Ding-Dong)
+            const now = audioContext.currentTime;
 
-                setRecentTickets(ticketList.slice(0, 5)); // Top 5 recent
-            } catch (error) {
-                console.error("Dashboard load failed", error);
+            // Primeira nota (Ding - E5)
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(659.25, now);
+
+            // Segunda nota (Dong - C5)
+            oscillator.frequency.setValueAtTime(523.25, now + 0.4);
+
+            gainNode.gain.setValueAtTime(0.1, now);
+            gainNode.gain.linearRampToValueAtTime(0.1, now + 0.3);
+            gainNode.gain.linearRampToValueAtTime(0.01, now + 0.8);
+
+            oscillator.start(now);
+            oscillator.stop(now + 1.0);
+        } catch (e) {
+            console.error("Audio playback failed", e);
+        }
+    };
+
+    const loadDashboardData = async () => {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        setUserRole(user.role);
+
+        try {
+            const [assets, tickets] = await Promise.all([
+                api.getAssets(),
+                api.getTickets()
+            ]);
+
+            const assetList = Array.isArray(assets) ? assets : [];
+            const ticketList = Array.isArray(tickets) ? tickets : [];
+
+            setStats({
+                assets: assetList.length,
+                tickets: ticketList.length,
+                openTickets: ticketList.filter(t => t.status !== 'Resolvido' && t.status !== 'Fechado').length,
+                resolvedTickets: ticketList.filter(t => t.status === 'Resolvido').length,
+                servers: assetList.filter(a => a.type === 'Server').length
+            });
+
+            // Ordenar por data decrescente se a API já não mandar
+            // Garantir que estamos pegando os mais recentes reais
+            // Supondo que a API já mande ordenado, se não, ordenaríamos aqui: ticketList.sort(...)
+
+            const recent = ticketList.slice(0, 5);
+            setRecentTickets(recent);
+
+            // Verificar novos chamados para alerta sonoro
+            if (ticketList.length > 0) {
+                // Pega o ID do mais recente (assumindo id incremental é seguro para novidade)
+                const latestId = Math.max(...ticketList.map(t => t.id));
+
+                // Se já tínhamos um ID registrado E o novo é maior -> Novo Chamado!
+                if (lastLatestTicketId.current > 0 && latestId > lastLatestTicketId.current) {
+                    console.log("Novo chamado detectado! ID:", latestId);
+                    playNotificationSound();
+                }
+                lastLatestTicketId.current = latestId;
             }
-        };
+
+        } catch (error) {
+            console.error("Dashboard load failed", error);
+        }
+    };
+
+    useEffect(() => {
         loadDashboardData();
+        // Polling a cada 15 segundos
+        const interval = setInterval(loadDashboardData, 15000);
+        return () => clearInterval(interval);
     }, []);
 
     return (
-        <div className="space-y-8">
-            <div>
-                <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Visão Geral</h2>
-                <p className="text-slate-500 mt-1">Bem-vindo ao sistema de gestão de TI.</p>
+        <div className="space-y-8 animate-fade-in">
+            <div className="flex justify-between items-center">
+                <div>
+                    <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Visão Geral</h2>
+                    <p className="text-slate-500 mt-1">Bem-vindo ao sistema de gestão de TI.</p>
+                </div>
+                {/* Indicador de Auto-Refresh */}
+                <div className="text-xs text-emerald-500 flex items-center gap-1 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-1 rounded-full">
+                    <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    Atualização em tempo real (15s)
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -104,18 +170,21 @@ const Dashboard = () => {
                             <p className="text-slate-500 text-center py-4">Nenhum chamado recente.</p>
                         ) : (
                             recentTickets.map((t) => (
-                                <div key={t.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900 rounded-xl">
+                                <div key={t.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors">
                                     <div className="flex gap-4 items-center">
                                         <div className={`w-2 h-2 rounded-full ${t.status === 'Novo' ? 'bg-purple-500' : 'bg-blue-500'}`}></div>
                                         <div>
                                             <h4 className="font-semibold text-slate-700 dark:text-slate-200">{t.title}</h4>
                                             <p className="text-xs text-slate-500">
-                                                {new Date(t.created_at).toLocaleDateString()}
+                                                #{t.id} • {new Date(t.created_at).toLocaleDateString()}
                                                 {t.asset ? ` • ${t.asset.hostname}` : ''}
                                             </p>
                                         </div>
                                     </div>
-                                    <span className="px-3 py-1 text-xs font-medium bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-full">{t.status}</span>
+                                    <span className={`px-3 py-1 text-xs font-medium rounded-full ${t.status === 'Novo' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' :
+                                            t.status === 'Em Andamento' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' :
+                                                'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                                        }`}>{t.status}</span>
                                 </div>
                             ))
                         )}
@@ -147,5 +216,6 @@ const Dashboard = () => {
         </div>
     );
 }
+
 
 export default Dashboard;

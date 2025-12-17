@@ -222,6 +222,10 @@ curl -X POST http://localhost:8080/api/v1/setup/init
 
 ## 📝 Changelog
 
+### v1.2.9 (2025-12-17)
+- 🔔 **Alertas Sonoros:** Dashboard agora emite um som (ding-dong) quando um novo chamado é detectado em tempo real.
+- ⏱️ **Auto-Refresh:** Dashboard e métricas atualizam automaticamente a cada 15 segundos.
+
 ### v1.2.8 (2025-12-17)
 - 🔧 **Diagnóstico:** Remoção temporária de filtro de tickets para usuários técnicos para identificar causa raiz de erro de servidor.
 
