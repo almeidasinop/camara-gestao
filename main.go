@@ -1263,7 +1263,7 @@ func main() {
 	// Serve arquivos estáticos da pasta build do React
 	r.Static("/assets", "./frontend/dist/assets")
 	r.StaticFile("/vite.svg", "./frontend/dist/vite.svg")
-	r.StaticFile("/favicon.ico", "./frontend/dist/favicon.ico")
+	r.StaticFile("/favicon.png", "./frontend/dist/favicon.png")
 
 	// Para qualquer outra rota não-API, serve o index.html (SPA)
 	r.NoRoute(func(c *gin.Context) {

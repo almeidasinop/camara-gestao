@@ -222,6 +222,10 @@ curl -X POST http://localhost:8080/api/v1/setup/init
 
 ## 📝 Changelog
 
+### v1.2.2 (2025-12-17)
+- 🐛 **Correção de Ícone:** Resolvido problema de carregamento do Favicon no Docker.
+- 📚 **Documentação Técnica:** Adicionado documento de arquitetura do sistema (`ARQUITETURA_TECNICA.md`).
+
 ### v1.2.1 (2025-12-17)
 - 👥 **Novo Perfil Supervisor:** Usuário com permissões expandidas para visualizar Dashboards, Relatórios e configurar Avisos, mas sem acesso administrativo total.
 - 📢 **Avisos do Sistema Dinâmicos:** Administradores e Supervisores podem configurar mensagens de texto que aparecem em destaque na TV Corporativa e Dashboard.
