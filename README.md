@@ -222,6 +222,9 @@ curl -X POST http://localhost:8080/api/v1/setup/init
 
 ## 📝 Changelog
 
+### v1.2.5 (2025-12-17)
+- 🐛 **Correção de Crash:** Resolvido erro que deixava a tela de configurações em branco.
+
 ### v1.2.4 (2025-12-17)
 - 🎨 **Novo Design Dashboard TV:** Interface completamente redesenhada com estilo NOC Profissional, fontes otimizadas, animações de fundo e melhor uso do espaço.
 

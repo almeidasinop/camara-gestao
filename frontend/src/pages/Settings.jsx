@@ -390,7 +390,7 @@ export default function Settings() {
                             className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
                             rows="3"
                             placeholder="Digite um aviso importante..."
-                            value={settings.find(s => s.key === 'system_notice')?.value || ''}
+                            value={systemSettings.find(s => s.key === 'system_notice')?.value || ''}
                             onChange={(e) => handleUpdateSetting('system_notice', e.target.value)}
                         />
                         <p className="text-xs text-slate-500 mt-1">Este aviso aparecerá em destaque no Dashboard e na TV Corporativa. Deixe vazio para não mostrar.</p>
@@ -409,7 +409,7 @@ export default function Settings() {
                         <div className="flex items-center gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
                             <label className="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" className="sr-only peer"
-                                    checked={settings.find(s => s.key === 'ldap_enabled')?.value === 'true'}
+                                    checked={systemSettings.find(s => s.key === 'ldap_enabled')?.value === 'true'}
                                     onChange={(e) => handleUpdateSetting('ldap_enabled', e.target.checked ? 'true' : 'false')}
                                 />
                                 <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
@@ -425,7 +425,7 @@ export default function Settings() {
                                     type="text"
                                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
                                     placeholder="ex: 192.168.1.5"
-                                    value={settings.find(s => s.key === 'ldap_host')?.value || ''}
+                                    value={systemSettings.find(s => s.key === 'ldap_host')?.value || ''}
                                     onChange={(e) => handleUpdateSetting('ldap_host', e.target.value)}
                                 />
                             </div>
@@ -435,7 +435,7 @@ export default function Settings() {
                                     type="text"
                                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
                                     placeholder="ex: 389"
-                                    value={settings.find(s => s.key === 'ldap_port')?.value || ''}
+                                    value={systemSettings.find(s => s.key === 'ldap_port')?.value || ''}
                                     onChange={(e) => handleUpdateSetting('ldap_port', e.target.value)}
                                 />
                             </div>
@@ -445,7 +445,7 @@ export default function Settings() {
                                     type="text"
                                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
                                     placeholder="ex: CAMARA"
-                                    value={settings.find(s => s.key === 'ldap_domain')?.value || ''}
+                                    value={systemSettings.find(s => s.key === 'ldap_domain')?.value || ''}
                                     onChange={(e) => handleUpdateSetting('ldap_domain', e.target.value)}
                                 />
                                 <p className="text-xs text-slate-500 mt-1">Prefixo usado para login: DOMINIO\usuario</p>
@@ -456,7 +456,7 @@ export default function Settings() {
                                     type="text"
                                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
                                     placeholder="ex: dc=camara,dc=local"
-                                    value={settings.find(s => s.key === 'ldap_basedn')?.value || ''}
+                                    value={systemSettings.find(s => s.key === 'ldap_basedn')?.value || ''}
                                     onChange={(e) => handleUpdateSetting('ldap_basedn', e.target.value)}
                                 />
                                 <p className="text-xs text-slate-500 mt-1">Opcional. Usado para buscar o Nome Completo do usuário.</p>
