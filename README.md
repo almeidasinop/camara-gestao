@@ -222,6 +222,9 @@ curl -X POST http://localhost:8080/api/v1/setup/init
 
 ## 📝 Changelog
 
+### v1.3.0 (2025-12-17)
+- 🐛 **Diagnóstico Avançado:** Implementado endpoint `/api/v1/debug/error` para capturar a causa exata de erros internos (500) do servidor. (Este recurso é temporário).
+
 ### v1.2.9 (2025-12-17)
 - 🔔 **Alertas Sonoros:** Dashboard agora emite um som (ding-dong) quando um novo chamado é detectado em tempo real.
 - ⏱️ **Auto-Refresh:** Dashboard e métricas atualizam automaticamente a cada 15 segundos.

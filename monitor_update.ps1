@@ -13,31 +13,29 @@ $watcher.Filter = "update_request"
 $watcher.EnableRaisingEvents = $true
 
 while ($true) {
-    $result = $watcher.WaitForChanged([System.IO.WatcherChangeTypes]::Created, 1000)
-    if ($result.TimedOut) {
-        continue
-    }
-
-    Write-Host "Detector de atualização acionado!" -ForegroundColor Yellow
-    
-    # Aguarda um pouco para garantir que o arquivo foi escrito/fechado
-    Start-Sleep -Seconds 2
-
-    try {
-        if (Test-Path ".\data\update_request") {
-            Remove-Item ".\data\update_request" -Force
-            
+    # Verifica se o arquivo existe (Polling a cada ciclo)
+    if (Test-Path ".\data\update_request") {
+        Write-Host "Arquivo de atualização detectado!" -ForegroundColor Yellow
+        
+        # Aguarda escrita finalizar
+        Start-Sleep -Seconds 1
+        
+        try {
+            Remove-Item ".\data\update_request" -Force -ErrorAction SilentlyContinue
+             
             Write-Host "1. Baixando nova versão..." -ForegroundColor Cyan
             docker compose -f docker-compose.prod.yml pull
-            
+             
             Write-Host "2. Reiniciando conteineres..." -ForegroundColor Cyan
             docker compose -f docker-compose.prod.yml up -d
-            
+             
             Write-Host "✅ Sistema atualizado com sucesso!" -ForegroundColor Green
-            Write-Host "👉 Acesse o sistema em: http://localhost" -ForegroundColor Cyan
+        }
+        catch {
+            Write-Host "Erro na atualização: $_" -ForegroundColor Red
         }
     }
-    catch {
-        Write-Host "Erro durante a atualização: $_" -ForegroundColor Red
-    }
+
+    # Aguarda evento ou timeout (simulando sleep do polling)
+    $result = $watcher.WaitForChanged([System.IO.WatcherChangeTypes]::Created, 2000)
 }

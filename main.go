@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"sync"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
@@ -16,6 +18,19 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
+
+var (
+	LastError   string
+	LastErrorMu sync.Mutex
+)
+
+func SetLastError(err string) {
+	LastErrorMu.Lock()
+	defer LastErrorMu.Unlock()
+	msg := fmt.Sprintf("[%s] %s", time.Now().Format("15:04:05"), err)
+	LastError = msg
+	fmt.Println("[DEBUG-ERROR]", msg)
+}
 
 // AuditLog registra ações críticas no sistema
 type AuditLog struct {
@@ -737,6 +752,7 @@ func GetTickets(c *gin.Context) {
 	// }
 
 	if err := query.Order("created_at desc").Find(&tickets).Error; err != nil {
+		SetLastError(fmt.Sprintf("GetTickets Error: %v", err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -1188,7 +1204,12 @@ func main() {
 	{
 		// Rotas Públicas
 		api.POST("/login", Login)
-		api.GET("/debug/users", DebugUsers)        // Diagnóstico: listar usuários
+		api.GET("/debug/users", DebugUsers) // Diagnóstico: listar usuários
+		api.GET("/debug/error", func(c *gin.Context) {
+			LastErrorMu.Lock()
+			defer LastErrorMu.Unlock()
+			c.String(http.StatusOK, LastError)
+		})
 		api.POST("/setup/init", SetupInitialAdmin) // Setup: criar admin inicial
 
 		// (Handlers movidos para o final do arquivo)
