@@ -716,9 +716,19 @@ func GetTickets(c *gin.Context) {
 
 	// Se for técnico, ver tickets atribuídos a ele OU tickets sem atribuição (para pegar)
 	// Também vê tickets onde ele é o criador (caso ele mesmo abra um chamado)
+	// Se for técnico, ver tickets atribuídos a ele OU tickets sem atribuição (para pegar)
+	// Também vê tickets onde ele é o criador (caso ele mesmo abra um chamado)
 	if role == "Tech" {
-		// Converter userID para uint de forma segura (depende de como saved no JWT context, assumindo float64 do mapclaims)
-		uid := uint(userID.(float64))
+		var uid uint
+		// Type Assertion Segura
+		if val, ok := userID.(float64); ok {
+			uid = uint(val)
+		} else if val, ok := userID.(uint); ok {
+			uid = val
+		} else {
+			fmt.Printf("[GetTickets] Aviso: userID com tipo inesperado: %T\n", userID)
+		}
+
 		query = query.Where("assigned_to_id = ? OR assigned_to_id IS NULL OR creator_id = ?", uid, uid)
 	}
 
@@ -843,7 +853,11 @@ func CreateTicket(c *gin.Context) {
 	currentUserID := uint(0)
 	userRole := ""
 	if userID, exists := c.Get("userID"); exists {
-		currentUserID = uint(userID.(float64))
+		if val, ok := userID.(float64); ok {
+			currentUserID = uint(val)
+		} else if val, ok := userID.(uint); ok {
+			currentUserID = val
+		}
 	}
 	if role, exists := c.Get("role"); exists {
 		userRole = role.(string)
