@@ -413,12 +413,9 @@ export default function Settings() {
             )}
 
 
-            <div className="text-center pt-8">
-                <p className="text-xs text-slate-400">
-                    CâmaraGestão v1.0.0 &bull; Desenvolvido por Equipe TI
-                </p>
+            <div className="mt-8 pt-8 border-t border-slate-100 dark:border-slate-800 text-center text-xs text-slate-400">
+                CâmaraGestão v{__APP_VERSION__} &bull; Desenvolvido por Equipe TI
             </div>
         </div>
     );
 }
-

@@ -98,7 +98,7 @@ export default function Login() {
                 </div>
                 <div className="bg-slate-50 dark:bg-slate-900 p-4 text-center border-t border-slate-100 dark:border-slate-800">
                     <p className="text-xs text-slate-500">
-                        CâmaraGestão v1.0 • Suporte TI
+                        CâmaraGestão v{__APP_VERSION__} • Suporte TI
                     </p>
                 </div>
             </div>
