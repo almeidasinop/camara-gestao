@@ -222,6 +222,9 @@ curl -X POST http://localhost:8080/api/v1/setup/init
 
 ## 📝 Changelog
 
+### v1.2.7 (2025-12-17)
+- 🔒 **Fix Crítico de Segurança:** Proteção contra falhas de autenticação no Middleware de permissões que causavam erro 500 para técnicos.
+
 ### v1.2.6 (2025-12-17)
 - 🐛 **Correção de Erro 500:** Resolvido problema crítico que impedia Técnicos e Supervisores de visualizar e criar chamados devido a erro interno de conversão de ID.
 
