@@ -722,19 +722,19 @@ func GetTickets(c *gin.Context) {
 	// Também vê tickets onde ele é o criador (caso ele mesmo abra um chamado)
 	// Se for técnico, ver tickets atribuídos a ele OU tickets sem atribuição (para pegar)
 	// Também vê tickets onde ele é o criador (caso ele mesmo abra um chamado)
-	if role == "Tech" {
-		var uid uint
-		// Type Assertion Segura
-		if val, ok := userID.(float64); ok {
-			uid = uint(val)
-		} else if val, ok := userID.(uint); ok {
-			uid = val
-		} else {
-			fmt.Printf("[GetTickets] Aviso: userID com tipo inesperado: %T\n", userID)
-		}
-
-		query = query.Where("assigned_to_id = ? OR assigned_to_id IS NULL OR creator_id = ?", uid, uid)
-	}
+	// if role == "Tech" {
+	// 	var uid uint
+	// 	// Type Assertion Segura
+	// 	if val, ok := userID.(float64); ok {
+	// 		uid = uint(val)
+	// 	} else if val, ok := userID.(uint); ok {
+	// 		uid = val
+	// 	} else {
+	// 		fmt.Printf("[GetTickets] Aviso: userID com tipo inesperado: %T\n", userID)
+	// 	}
+	//
+	// 	// query = query.Where("assigned_to_id = ? OR assigned_to_id IS NULL OR creator_id = ?", uid, uid)
+	// }
 
 	if err := query.Order("created_at desc").Find(&tickets).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

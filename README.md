@@ -222,6 +222,9 @@ curl -X POST http://localhost:8080/api/v1/setup/init
 
 ## 📝 Changelog
 
+### v1.2.8 (2025-12-17)
+- 🔧 **Diagnóstico:** Remoção temporária de filtro de tickets para usuários técnicos para identificar causa raiz de erro de servidor.
+
 ### v1.2.7 (2025-12-17)
 - 🔒 **Fix Crítico de Segurança:** Proteção contra falhas de autenticação no Middleware de permissões que causavam erro 500 para técnicos.
 
