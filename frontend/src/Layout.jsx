@@ -160,7 +160,9 @@ export default function Layout() {
                     {user.role !== 'User' && (
                         <>
                             <div className="my-2 border-t border-slate-100 dark:border-slate-800" />
-                            <SidebarItem to="/audit" icon={Shield} label="Auditoria" collapsed={collapsed && !mobileMenuOpen} />
+                            {user.role === 'Admin' && (
+                                <SidebarItem to="/audit" icon={Shield} label="Auditoria" collapsed={collapsed && !mobileMenuOpen} />
+                            )}
 
                             <a
                                 href="/tv"

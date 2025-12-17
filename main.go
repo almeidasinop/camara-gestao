@@ -304,6 +304,8 @@ func seedSettings() {
 		{Key: "ldap_port", Value: "389", Description: "Porta do LDAP (padrão 389 ou 636 para SSL)"},
 		{Key: "ldap_basedn", Value: "dc=camara,dc=local", Description: "Base DN para busca de usuários"},
 		{Key: "ldap_domain", Value: "CAMARA", Description: "Domínio (NetBIOS) para login (ex: CAMARA\\user)"},
+		// Avisos do Sistema
+		{Key: "system_notice", Value: "Bem-vindo ao sistema de gestão! Nenhum aviso importante no momento.", Description: "Aviso exibido no painel da TV e Dashboard"},
 	}
 	for _, s := range defaults {
 		var existing SystemSetting
@@ -366,7 +368,10 @@ func seedDatabase() {
 	andre := createSeedUser("andre", "Tech", "André (Hardware)")
 	carlos := createSeedUser("carlos", "Tech", "Carlos (Softwares)")
 
-	// 3. Criar Categorias de Serviço Iniciais
+	// 3. Criar Supervisor Padrão
+	createSeedUser("supervisor", "Supervisor", "Supervisor Geral")
+
+	// 4. Criar Categorias de Serviço Iniciais
 	fmt.Println("[SEED] Criando categorias de serviço...")
 	seedCategory("Redes e Telefonia", mauro.ID)
 	seedCategory("Informática e Impressoras", andre.ID)
@@ -736,9 +741,19 @@ func UpdateSetting(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	role, _ := c.Get("role")
+	key := c.Param("key")
+
+	// Validação de Permissão: Supervisor só pode alterar system_notice
+	if role == "Supervisor" && key != "system_notice" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Supervisor só pode alterar avisos do sistema"})
+		return
+	}
+
 	// Apenas atualiza o valor, key é fixa
 	var setting SystemSetting
-	if err := db.First(&setting, "key = ?", c.Param("key")).Error; err != nil {
+	if err := db.First(&setting, "key = ?", key).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Configuração não encontrada"})
 		return
 	}
@@ -1194,13 +1209,13 @@ func main() {
 			secure.POST("/tickets/:id/comments", AddComment)
 
 			// Reports
-			secure.GET("/reports", GetReports)
+			secure.GET("/reports", RoleMiddleware("Tech", "Admin", "Supervisor"), GetReports)
 
 			// Audit (Admin only)
 			secure.GET("/audit", RoleMiddleware("Admin"), GetAuditLogs)
 
-			// Dashboard KPIs (Tech/Admin)
-			secure.GET("/dashboard/kpis", RoleMiddleware("Tech", "Admin"), GetDashboardStats)
+			// Dashboard KPIs (Tech/Admin/Supervisor)
+			secure.GET("/dashboard/kpis", RoleMiddleware("Tech", "Admin", "Supervisor"), GetDashboardStats)
 
 			// Users
 			// Users Routes
@@ -1238,7 +1253,7 @@ func main() {
 
 			// System Settings
 			secure.GET("/settings", GetSettings)
-			secure.PUT("/settings/:key", RoleMiddleware("Admin"), UpdateSetting)
+			secure.PUT("/settings/:key", RoleMiddleware("Admin", "Supervisor"), UpdateSetting)
 		}
 	}
 

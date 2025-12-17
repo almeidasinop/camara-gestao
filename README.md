@@ -222,6 +222,10 @@ curl -X POST http://localhost:8080/api/v1/setup/init
 
 ## 📝 Changelog
 
+### v1.2.1 (2025-12-17)
+- 👥 **Novo Perfil Supervisor:** Usuário com permissões expandidas para visualizar Dashboards, Relatórios e configurar Avisos, mas sem acesso administrativo total.
+- 📢 **Avisos do Sistema Dinâmicos:** Administradores e Supervisores podem configurar mensagens de texto que aparecem em destaque na TV Corporativa e Dashboard.
+
 ### v1.2.0 (2025-12-17)
 - 🔒 **Integração Active Directory (LDAP):** Autenticação corporativa com suporte a configuração via painel administrativo.
 - ✨ **Painel de Configurações:** Nova seção para configurar Host, Porta e Domínio do AD/LDAP sem reiniciar o servidor.

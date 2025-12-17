@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Trash2, Download, Database, Monitor, AlertTriangle, Layers, Edit2, Plus, X, Server } from 'lucide-react';
+import { Save, Trash2, Download, Database, Monitor, AlertTriangle, Layers, Edit2, Plus, X, Server, MessageSquare } from 'lucide-react';
 import { api } from '../services/api';
 
 export default function Settings() {
@@ -377,6 +377,26 @@ export default function Settings() {
                     </div>
                 </div>
             </div>
+
+            {/* Avisos do Sistema (Admin e Supervisor) */}
+            {['Admin', 'Supervisor'].includes(userRole) && (
+                <div className="bg-white dark:bg-slate-950 p-6 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm mt-8 border-l-4 border-l-amber-500">
+                    <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                        <MessageSquare className="w-5 h-5 text-amber-600" /> Avisos do Sistema
+                    </h3>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Mensagem para TV e Dashboard</label>
+                        <textarea
+                            className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
+                            rows="3"
+                            placeholder="Digite um aviso importante..."
+                            value={settings.find(s => s.key === 'system_notice')?.value || ''}
+                            onChange={(e) => handleUpdateSetting('system_notice', e.target.value)}
+                        />
+                        <p className="text-xs text-slate-500 mt-1">Este aviso aparecerá em destaque no Dashboard e na TV Corporativa. Deixe vazio para não mostrar.</p>
+                    </div>
+                </div>
+            )}
 
             {/* Integração Active Directory (LDAP) */}
             {userRole === 'Admin' && (

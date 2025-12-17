@@ -16,6 +16,7 @@ export default function TvDashboard() {
     const [stats, setStats] = useState({ open: 0, critical: 0, today: 0, slaBreach: 0 });
     const [criticalTickets, setCriticalTickets] = useState([]);
     const [theme, setTheme] = useState('dark');
+    const [systemNotice, setSystemNotice] = useState('');
 
     // Auto Refresh every 30s
     useEffect(() => {
@@ -41,6 +42,10 @@ export default function TvDashboard() {
             if (data && data.critical_tickets) {
                 setCriticalTickets(data.critical_tickets);
             }
+
+            const settingsData = await api.getSettings();
+            const notice = settingsData.find(s => s.key === 'system_notice')?.value;
+            setSystemNotice(notice);
 
         } catch (e) {
             console.error("Erro dashboard TV", e);
@@ -147,14 +152,31 @@ export default function TvDashboard() {
                 <div className="bg-slate-900/50 rounded-3xl border border-slate-800 p-8 backdrop-blur-sm flex flex-col justify-between">
                     <div>
                         <h3 className="text-xl font-bold text-slate-400 mb-6 uppercase tracking-wider">Avisos do Sistema</h3>
-                        <div className="bg-blue-600/10 border border-blue-500/30 p-6 rounded-2xl mb-4">
-                            <h4 className="font-bold text-blue-400 text-lg mb-2">🚀 Backup Realizado</h4>
-                            <p className="text-sm opacity-80">O backup automático foi executado com sucesso às 03:00 AM. Seus dados estão seguros.</p>
-                        </div>
-                        <div className="bg-amber-600/10 border border-amber-500/30 p-6 rounded-2xl mb-4">
-                            <h4 className="font-bold text-amber-400 text-lg mb-2">⚠️ Manutenção</h4>
-                            <p className="text-sm opacity-80">Lembrete: Atualização do servidor agendada para sexta-feira às 18h.</p>
-                        </div>
+
+                        {systemNotice && systemNotice.length > 0 ? (
+                            <div className="bg-amber-600/10 border border-amber-500/30 p-6 rounded-2xl mb-4 animate-pulse">
+                                <h4 className="font-bold text-amber-400 text-lg mb-2 flex items-center gap-2">
+                                    <AlertCircle className="w-6 h-6" /> Comunicado
+                                </h4>
+                                <p className="text-lg opacity-90 font-medium">{systemNotice}</p>
+                            </div>
+                        ) : (
+                            <div className="bg-emerald-600/10 border border-emerald-500/30 p-6 rounded-2xl mb-4">
+                                <h4 className="font-bold text-emerald-400 text-lg mb-2 flex items-center gap-2">
+                                    <CheckCircle className="w-6 h-6" /> Sistema Operacional
+                                </h4>
+                                <p className="text-sm opacity-80">Todos os sistemas operando normalmente.</p>
+                            </div>
+                        )}
+
+                        {stats.slaBreach > 0 && (
+                            <div className="bg-red-600/10 border border-red-500/30 p-6 rounded-2xl mb-4">
+                                <h4 className="font-bold text-red-400 text-lg mb-2 flex items-center gap-2">
+                                    <AlertCircle className="w-6 h-6" /> Atenção SLA
+                                </h4>
+                                <p className="text-sm opacity-80">{stats.slaBreach} chamados violaram o prazo de atendimento.</p>
+                            </div>
+                        )}
                     </div>
 
                     <div className="text-center opacity-30 mt-auto">
