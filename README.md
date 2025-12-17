@@ -222,6 +222,10 @@ curl -X POST http://localhost:8080/api/v1/setup/init
 
 ## 📝 Changelog
 
+### v1.2.0 (2025-12-17)
+- 🔒 **Integração Active Directory (LDAP):** Autenticação corporativa com suporte a configuração via painel administrativo.
+- ✨ **Painel de Configurações:** Nova seção para configurar Host, Porta e Domínio do AD/LDAP sem reiniciar o servidor.
+
 ### v1.1.2 (2025-12-17)
 - ✨ **Automação de Versão:** A versão exibida no rodapé (v1.x.x) agora é lida automaticamente do `package.json`.
 

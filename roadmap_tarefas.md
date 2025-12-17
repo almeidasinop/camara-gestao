@@ -20,17 +20,12 @@ Este documento lista as melhorias planejadas para elevar o nível do sistema Câ
     - Criar endpoint no Frontend que gera uma etiqueta imprimível para um ativo selecionado.
     - O QR Code deve levar para a URL: `/assets/{id}/view` ou `/tickets/new?asset_id={id}`.
 
-- [ ] **4. Autenticação AD/LDAP (Active Directory)**
+- [x] **4. Autenticação AD/LDAP (Active Directory)**
   - **Objetivo:** SSO (Single Sign-On) com a rede da Câmara.
-  - **Status:** *Parcialmente Iniciado (Backend stub)*.
+  - **Status:** *Concluído (v1.2.0)*.
   - **Ação Restante:**
-    - [ ] **Configuração (Frontend/Settings):** Criar campos no menu Configurações para inserir: `LDAP Host`, `LDAP Port`, `Base DN`, `Bind User` e `Bind Password`.
-    - [ ] **Backend (Implementação Real):** Substituir a função mock `authenticateLDAP` no `main.go`. Implementar conexão real usando `go-ldap/ldap/v3`:
-        1. Conectar via TCP/TLS.
-        2. Realizar Bind com conta de serviço (se necessário) ou anônimo.
-        3. Buscar DN do usuário pelo `sAMAccountName` ou `uid`.
-        4. Tentar Bind com as credenciais do usuário.
-        5. Se sucesso: Sincronizar dados (Nome, Email) via JIT (já esboçado).
+    - [x] **Configuração (Frontend/Settings):** Implementado painel de configuração.
+    - [x] **Backend (Implementação Real):** Implementado usando `go-ldap/ldap/v3`. Sincronização JIT ativa.
 
 ## 🔮 Futuro (Concluídos em v2.2)
 

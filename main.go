@@ -11,6 +11,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
+	"github.com/go-ldap/ldap/v3"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -500,35 +501,67 @@ type LDAPUser struct {
 
 func authenticateLDAP(username, password string) (*LDAPUser, error) {
 	// Carregar configurações
-	var host, port, domain SystemSetting
+	var host, port, domain, baseDN SystemSetting
 	db.First(&host, "key = ?", "ldap_host")
 	db.First(&port, "key = ?", "ldap_port")
 	db.First(&domain, "key = ?", "ldap_domain")
+	db.First(&baseDN, "key = ?", "ldap_basedn") // Novo campo para busca
 
-	// Por enquanto, como não temos a lib importada no main e pode dar erro de build se a net estiver ruim,
-	// vamos fazer um mock se a senha for "ldap123" para testar o fluxo.
-	// Na implementação real, usaríamos "github.com/go-ldap/ldap/v3"
+	// Validação básica
+	if host.Value == "" || port.Value == "" {
+		return nil, fmt.Errorf("LDAP não configurado corretamente (Host/Port vazios)")
+	}
 
-	// MOCK IMPLEMENTATION FOR SAFETY (até instalar a lib)
-	/*
-	   conn, err := ldap.DialURL(fmt.Sprintf("ldap://%s:%s", host.Value, port.Value))
-	   if err != nil { return nil, err }
-	   defer conn.Close()
+	// Conectar ao LDAP
+	ldapURL := fmt.Sprintf("ldap://%s:%s", host.Value, port.Value)
+	conn, err := ldap.DialURL(ldapURL)
+	if err != nil {
+		fmt.Printf("[LDAP] Erro de conexão: %v\n", err)
+		return nil, err
+	}
+	defer conn.Close()
 
-	   // Bind Simples (Login direto com user@domain ou domain\user)
-	   userPrincipal := fmt.Sprintf("%s\\%s", domain.Value, username) // ou username@domain.com
+	// Timeout de operação
+	conn.SetTimeout(5 * time.Second)
 
-	   if err := conn.Bind(userPrincipal, password); err != nil {
-	       return nil, err
-	   }
+	// Bind (Login) usando formato NetBIOS: DOMAIN\Username
+	// Isso evita precisar de um "bind user" administrativo para buscar o DN do usuário
+	userPrincipal := fmt.Sprintf("%s\\%s", domain.Value, username)
 
-	   // Se bind funcionou,Login OK.
-	   // Pesquisar para pegar FullName
-	   // ...
-	*/
+	fmt.Printf("[LDAP] Tentando bind com: %s\n", userPrincipal)
+	if err := conn.Bind(userPrincipal, password); err != nil {
+		fmt.Printf("[LDAP] Erro no Bind: %v\n", err)
+		return nil, err
+	}
 
-	// Simulando erro por enquanto pois a lib pode não estar lá
-	return nil, fmt.Errorf("LDAP não configurado/instalado")
+	// Autenticação Sucesso. Agora tentar buscar o nome completo.
+	fullName := username // Fallback
+
+	if baseDN.Value != "" {
+		filter := fmt.Sprintf("(&(objectClass=user)(sAMAccountName=%s))", username)
+		searchReq := ldap.NewSearchRequest(
+			baseDN.Value,
+			ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
+			filter,
+			[]string{"displayName", "cn", "mail"},
+			nil,
+		)
+
+		sr, err := conn.Search(searchReq)
+		if err == nil && len(sr.Entries) > 0 {
+			entry := sr.Entries[0]
+			if dn := entry.GetAttributeValue("displayName"); dn != "" {
+				fullName = dn
+			} else if cn := entry.GetAttributeValue("cn"); cn != "" {
+				fullName = cn
+			}
+			fmt.Printf("[LDAP] Encontrado Nome: %s\n", fullName)
+		} else {
+			fmt.Printf("[LDAP] Busca de nome falhou ou retorno vazio: %v\n", err)
+		}
+	}
+
+	return &LDAPUser{Username: username, FullName: fullName}, nil
 }
 
 // Check Role Middleware
