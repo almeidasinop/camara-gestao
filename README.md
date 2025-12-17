@@ -222,6 +222,9 @@ curl -X POST http://localhost:8080/api/v1/setup/init
 
 ## 📝 Changelog
 
+### v1.2.3 (2025-12-17)
+- 🐛 **Correção Crítica:** Ajuste na URL da API para suportar conexões em qualquer porta (resolve erro 80/8080).
+
 ### v1.2.2 (2025-12-17)
 - 🐛 **Correção de Ícone:** Resolvido problema de carregamento do Favicon no Docker.
 - 📚 **Documentação Técnica:** Adicionado documento de arquitetura do sistema (`ARQUITETURA_TECNICA.md`).
