@@ -222,6 +222,9 @@ curl -X POST http://localhost:8080/api/v1/setup/init
 
 ## 📝 Changelog
 
+### v1.2.4 (2025-12-17)
+- 🎨 **Novo Design Dashboard TV:** Interface completamente redesenhada com estilo NOC Profissional, fontes otimizadas, animações de fundo e melhor uso do espaço.
+
 ### v1.2.3 (2025-12-17)
 - 🐛 **Correção Crítica:** Ajuste na URL da API para suportar conexões em qualquer porta (resolve erro 80/8080).
 
