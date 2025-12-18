@@ -6,6 +6,7 @@ require (
 	github.com/gin-contrib/cors v1.7.6
 	github.com/gin-gonic/gin v1.11.0
 	github.com/glebarez/sqlite v1.11.0
+	github.com/go-ldap/ldap/v3 v3.4.12
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	golang.org/x/crypto v0.46.0
 	gorm.io/gorm v1.31.1
@@ -21,7 +22,6 @@ require (
 	github.com/gin-contrib/sse v1.1.0 // indirect
 	github.com/glebarez/go-sqlite v1.21.2 // indirect
 	github.com/go-asn1-ber/asn1-ber v1.5.8-0.20250403174932-29230038a667 // indirect
-	github.com/go-ldap/ldap/v3 v3.4.12 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.27.0 // indirect

@@ -73,6 +73,7 @@ export const api = {
 
     createTicket: (data) => request('/tickets', { method: 'POST', body: JSON.stringify(data) }),
     updateTicketStatus: (id, status) => request(`/tickets/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+    assignTicket: (id, techId) => request(`/tickets/${id}/assign`, { method: 'PATCH', body: JSON.stringify({ assigned_to_id: parseInt(techId) }) }),
     addTicketComment: (id, content) => request(`/tickets/${id}/comments`, { method: 'POST', body: JSON.stringify({ content }) }),
     getReports: (techId) => request(`/reports${techId ? `?tech_id=${techId}` : ''}`),
 

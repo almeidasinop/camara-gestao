@@ -20,30 +20,25 @@ export default function Settings() {
 
     useEffect(() => {
         const user = JSON.parse(localStorage.getItem('user') || '{}');
-        console.log('[Settings] Usuário do localStorage:', user);
         setUserRole(user.role);
 
         setSectors(JSON.parse(localStorage.getItem('ticket_sectors') || '[]'));
         setPatrimonies(JSON.parse(localStorage.getItem('ticket_patrimonies') || '[]'));
 
-        // Carregar dados do admin imediatamente se for admin
-        if (user.role === 'Admin') {
-            console.log('[Settings] Usuário é Admin, carregando dados...');
+        // Carregar dados do admin imediatamente se for admin ou supervisor (para settings)
+        if (user.role === 'Admin' || user.role === 'Supervisor') {
             loadAdminData();
-        } else {
-            console.log('[Settings] Usuário NÃO é Admin, role:', user.role);
         }
     }, []); // Executar apenas uma vez ao montar o componente
 
     const loadAdminData = async () => {
-        console.log('[Settings] Carregando dados do admin...');
         try {
             const [cats, techList, settingsData] = await Promise.all([
-                api.getCategories(),
-                api.getTechs(),
-                api.getSettings()
+                api.getCategories().catch(() => []), // Supervisor fails here, return empty
+                api.getTechs().catch(() => []),      // Supervisor fails here? maybe
+                api.getSettings()                    // Allowed
             ]);
-            console.log('[Settings] Dados carregados:', { cats, techList, settingsData });
+
             setCategories(cats || []);
             setTechs(techList || []);
             setSystemSettings(settingsData || []);

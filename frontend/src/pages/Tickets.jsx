@@ -367,6 +367,32 @@ const TicketDetailModal = ({ ticket, onClose, onUpdate, currentUserRole }) => {
     const [newComment, setNewComment] = useState('');
     const [statusLoading, setStatusLoading] = useState(false);
 
+    // Transfer Logic
+    const [isAssigning, setIsAssigning] = useState(false);
+    const [techs, setTechs] = useState([]);
+    const [selectedTech, setSelectedTech] = useState('');
+
+    useEffect(() => {
+        if (isAssigning && currentUserRole !== 'User') {
+            api.getTechs().then(setTechs).catch(() => { });
+        }
+    }, [isAssigning]);
+
+    const handleAssign = async () => {
+        if (!selectedTech) return;
+        setStatusLoading(true);
+        try {
+            await api.assignTicket(ticket.id, selectedTech);
+            alert("Chamado transferido!");
+            onUpdate();
+            onClose();
+        } catch (e) {
+            alert("Erro ao transferir chamado");
+        } finally {
+            setStatusLoading(false);
+        }
+    };
+
     const handleStatusChange = async (newStatus) => {
         if (!confirm(`Alterar status para ${newStatus}?`)) return;
         setStatusLoading(true);
@@ -468,29 +494,50 @@ const TicketDetailModal = ({ ticket, onClose, onUpdate, currentUserRole }) => {
                 {/* Footer - Actions & Input */}
                 <div className="p-4 bg-white dark:bg-slate-950 border-t border-slate-100 dark:border-slate-800">
                     {/* Status Actions */}
-                    <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
-                        {currentUserRole !== 'User' && ticket.status === 'Novo' && (
-                            <button disabled={statusLoading} onClick={() => handleStatusChange('Em Andamento')} className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-200 transition whitespace-nowrap">
-                                ▶ Iniciar Atendimento
-                            </button>
-                        )}
-                        {currentUserRole !== 'User' && (ticket.status === 'Em Andamento' || ticket.status === 'Novo') && (
-                            <button disabled={statusLoading} onClick={() => handleStatusChange('Resolvido')} className="px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg text-sm font-medium hover:bg-emerald-200 transition whitespace-nowrap">
-                                ✅ Resolver
-                            </button>
-                        )}
-                        {ticket.status === 'Resolvido' && (
-                            // User ou Tech pode fechar/reabrir? Geralmente user fecha.
-                            <button disabled={statusLoading} onClick={() => handleStatusChange('Fechado')} className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition whitespace-nowrap">
-                                🔒 Fechar Chamado
-                            </button>
-                        )}
-                        {ticket.status === 'Resolvido' && (
-                            <button disabled={statusLoading} onClick={() => handleStatusChange('Em Andamento')} className="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-sm font-medium hover:bg-amber-200 transition whitespace-nowrap">
-                                ↩ Reabrir
-                            </button>
-                        )}
-                    </div>
+                    {isAssigning ? (
+                        <div className="flex gap-2 items-center mb-4 bg-slate-50 dark:bg-slate-900 p-3 rounded-lg border border-indigo-100 dark:border-indigo-900 animate-fade-in">
+                            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Transferir para:</span>
+                            <select
+                                className="px-2 py-1.5 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded text-sm outline-none text-slate-800 dark:text-white"
+                                value={selectedTech}
+                                onChange={e => setSelectedTech(e.target.value)}
+                            >
+                                <option value="">Selecione um técnico...</option>
+                                {techs.map(t => <option key={t.id} value={t.id}>{t.full_name || t.username}</option>)}
+                            </select>
+                            <button onClick={handleAssign} disabled={!selectedTech || statusLoading} className="px-3 py-1.5 bg-indigo-600 text-white rounded text-sm font-medium hover:bg-indigo-700">Confirmar</button>
+                            <button onClick={() => setIsAssigning(false)} className="px-3 py-1.5 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm">Cancelar</button>
+                        </div>
+                    ) : (
+                        <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+                            {currentUserRole !== 'User' && ticket.status !== 'Fechado' && (
+                                <button disabled={statusLoading} onClick={() => setIsAssigning(true)} className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-lg text-sm font-medium hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition whitespace-nowrap flex items-center gap-1">
+                                    👤 Transferir
+                                </button>
+                            )}
+                            {currentUserRole !== 'User' && ticket.status === 'Novo' && (
+                                <button disabled={statusLoading} onClick={() => handleStatusChange('Em Andamento')} className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-200 transition whitespace-nowrap">
+                                    ▶ Iniciar Atendimento
+                                </button>
+                            )}
+                            {currentUserRole !== 'User' && (ticket.status === 'Em Andamento' || ticket.status === 'Novo') && (
+                                <button disabled={statusLoading} onClick={() => handleStatusChange('Resolvido')} className="px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg text-sm font-medium hover:bg-emerald-200 transition whitespace-nowrap">
+                                    ✅ Resolver
+                                </button>
+                            )}
+                            {ticket.status === 'Resolvido' && (
+                                // User ou Tech pode fechar/reabrir? Geralmente user fecha.
+                                <button disabled={statusLoading} onClick={() => handleStatusChange('Fechado')} className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition whitespace-nowrap">
+                                    🔒 Fechar Chamado
+                                </button>
+                            )}
+                            {ticket.status === 'Resolvido' && (
+                                <button disabled={statusLoading} onClick={() => handleStatusChange('Em Andamento')} className="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-sm font-medium hover:bg-amber-200 transition whitespace-nowrap">
+                                    ↩ Reabrir
+                                </button>
+                            )}
+                        </div>
+                    )}
 
                     {/* Comment Input */}
                     <form onSubmit={handleSendComment} className="flex gap-2">

@@ -946,7 +946,13 @@ func UpdateTicketStatus(c *gin.Context) {
 	// Verificar permissões
 	userID, _ := c.Get("userID")
 	role, _ := c.Get("role")
-	uid := uint(userID.(float64))
+
+	var uid uint
+	if val, ok := userID.(float64); ok {
+		uid = uint(val)
+	} else if val, ok := userID.(uint); ok {
+		uid = val
+	}
 
 	// Tech e Admin podem tudo
 	// User só pode alterar status se for o criador E (geralmente Reabrir ou Cancelar, mas vamos deixar ele reabrir)
@@ -1245,6 +1251,7 @@ func main() {
 			secure.POST("/tickets", CreateTicket)
 			secure.GET("/tickets/:id", GetTicketByID)
 			secure.PATCH("/tickets/:id/status", UpdateTicketStatus)
+			secure.PATCH("/tickets/:id/assign", AssignTicket)
 			secure.POST("/tickets/:id/comments", AddComment)
 
 			// Reports
@@ -1329,7 +1336,9 @@ func main() {
 		}
 	}()
 
-	r.Run(":" + port)
+	if err := r.Run(":" + port); err != nil {
+		fmt.Println("FATAL ERROR STARTING SERVER:", err)
+	}
 }
 
 // --- AUDIT HANDLERS ---
@@ -1827,4 +1836,28 @@ func SetupInitialAdmin(c *gin.Context) {
 		"password": "admin123",
 		"note":     "Por favor, altere a senha após o primeiro login.",
 	})
+}
+
+func AssignTicket(c *gin.Context) {
+	var input struct {
+		AssignedToID uint `json:"assigned_to_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var ticket Ticket
+	if err := db.First(&ticket, c.Param("id")).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
+		return
+	}
+
+	ticket.AssignedToID = &input.AssignedToID
+	if err := db.Save(&ticket).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao salvar atribuição"})
+		return
+	}
+
+	c.JSON(http.StatusOK, ticket)
 }
