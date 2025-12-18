@@ -7,7 +7,7 @@ COPY frontend ./
 RUN npm run build
 
 # Estágio 2: Build do Backend
-FROM golang:1.23-alpine AS backend-builder
+FROM golang:alpine AS backend-builder
 WORKDIR /app
 # glebarez/sqlite é pure Go, não precisa de gcc/build-base
 COPY go.mod go.sum ./
