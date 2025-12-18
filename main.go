@@ -495,6 +495,7 @@ func generateTokenAndRespond(c *gin.Context, user User) {
 	// Gerar JWT
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"userID":   user.ID,
+		"sub":      user.ID, // Adding sub just to be standard compliant
 		"username": user.Username,
 		"role":     user.Role,
 		"exp":      time.Now().Add(time.Hour * 8).Unix(),
@@ -635,7 +636,12 @@ func AuthMiddleware() gin.HandlerFunc {
 		claims, ok := token.Claims.(jwt.MapClaims)
 		if ok && token.Valid {
 			// Set user context
-			c.Set("userID", claims["sub"])
+			// Check for both userID and sub to be robust
+			if val, ok := claims["userID"]; ok {
+				c.Set("userID", val)
+			} else {
+				c.Set("userID", claims["sub"])
+			}
 			c.Set("role", claims["role"])
 		}
 
