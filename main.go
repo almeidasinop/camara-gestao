@@ -743,13 +743,20 @@ func GetTickets(c *gin.Context) {
 	// Também vê tickets onde ele é o criador (caso ele mesmo abra um chamado)
 	// Se for técnico, ver tickets atribuídos a ele OU tickets sem atribuição (para pegar)
 	// Também vê tickets onde ele é o criador (caso ele mesmo abra um chamado)
+	// DEBUG LOGS
+	fmt.Printf("[GetTickets] Request por Role=%v, RawUserID=%v (Type: %T)\n", role, userID, userID)
+
 	if role == "Tech" {
 		var uid uint
 		if val, ok := userID.(float64); ok {
 			uid = uint(val)
 		} else if val, ok := userID.(uint); ok {
 			uid = val
+		} else {
+			fmt.Printf("[GetTickets] ALERTA: UserID type desconhecido: %T\n", userID)
 		}
+
+		fmt.Printf("[GetTickets] Filtrando para Tech ID: %d\n", uid)
 		// Tech vê: Tickets atribuídos a ele, tickets que ele criou, OU tickets não atribuídos (para pegar)
 		query = query.Where("assigned_to_id = ? OR creator_id = ? OR assigned_to_id IS NULL", uid, uid)
 	}
