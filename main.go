@@ -726,7 +726,7 @@ func GetTickets(c *gin.Context) {
 	role, _ := c.Get("role")
 	userID, _ := c.Get("userID")
 
-	query := db.Preload("Asset").Preload("Comments").Preload("Creator")
+	query := db.Preload("Asset").Preload("Comments").Preload("Creator").Preload("Category").Preload("AssignedTo")
 
 	// Se for usuário comum, filtrar apenas os seus tickets
 	if role == "User" {
@@ -737,19 +737,16 @@ func GetTickets(c *gin.Context) {
 	// Também vê tickets onde ele é o criador (caso ele mesmo abra um chamado)
 	// Se for técnico, ver tickets atribuídos a ele OU tickets sem atribuição (para pegar)
 	// Também vê tickets onde ele é o criador (caso ele mesmo abra um chamado)
-	// if role == "Tech" {
-	// 	var uid uint
-	// 	// Type Assertion Segura
-	// 	if val, ok := userID.(float64); ok {
-	// 		uid = uint(val)
-	// 	} else if val, ok := userID.(uint); ok {
-	// 		uid = val
-	// 	} else {
-	// 		fmt.Printf("[GetTickets] Aviso: userID com tipo inesperado: %T\n", userID)
-	// 	}
-	//
-	// 	// query = query.Where("assigned_to_id = ? OR assigned_to_id IS NULL OR creator_id = ?", uid, uid)
-	// }
+	if role == "Tech" {
+		var uid uint
+		if val, ok := userID.(float64); ok {
+			uid = uint(val)
+		} else if val, ok := userID.(uint); ok {
+			uid = val
+		}
+		// Tech vê: Tickets atribuídos a ele, tickets que ele criou, OU tickets não atribuídos (para pegar)
+		query = query.Where("assigned_to_id = ? OR creator_id = ? OR assigned_to_id IS NULL", uid, uid)
+	}
 
 	if err := query.Order("created_at desc").Find(&tickets).Error; err != nil {
 		SetLastError(fmt.Sprintf("GetTickets Error: %v", err))
@@ -993,6 +990,32 @@ func AddComment(c *gin.Context) {
 		return
 	}
 	input.TicketID = ticket.ID
+
+	// AUTO-OPEN Logic: Se Tech/Admin comentar em ticket "Novo", muda para "Em Andamento" e atribui se necessário
+	role, _ := c.Get("role")
+	userID, _ := c.Get("userID")
+
+	// Type Assertion Helper (dirty fix for localized scope)
+	var currentUID uint
+	if val, ok := userID.(float64); ok {
+		currentUID = uint(val)
+	} else if val, ok := userID.(uint); ok {
+		currentUID = val
+	}
+
+	if (role == "Tech" || role == "Admin") && ticket.Status == "Novo" {
+		ticket.Status = "Em Andamento"
+
+		// Se não tiver dono, o técnico que respondeu assume
+		if ticket.AssignedToID == nil && currentUID > 0 {
+			ticket.AssignedToID = &currentUID
+		}
+
+		db.Save(&ticket)
+		// Log de ação automática
+		logAction(currentUID, "UPDATE", "Ticket", ticket.ID, "Status atualizado automaticamente via chat")
+	}
+
 	db.Create(&input)
 	c.JSON(http.StatusCreated, input)
 }

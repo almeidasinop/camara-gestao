@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Monitor, AlertCircle, CheckCircle, Server, Ticket, Bell } from 'lucide-react';
 import { api } from '../services/api';
 import { useNavigate } from 'react-router-dom';
+import TicketDetailModal from '../components/TicketDetailModal';
 
 const StatCard = ({ title, value, icon: Icon, colorClass }) => {
     return (
@@ -31,6 +32,7 @@ const Dashboard = () => {
     });
     const [recentTickets, setRecentTickets] = useState([]);
     const [userRole, setUserRole] = useState('');
+    const [viewTicket, setViewTicket] = useState(null);
 
     // Ref para rastrear o ID do chamado mais recente e evitar som no load inicial
     const lastLatestTicketId = useRef(0);
@@ -170,7 +172,7 @@ const Dashboard = () => {
                             <p className="text-slate-500 text-center py-4">Nenhum chamado recente.</p>
                         ) : (
                             recentTickets.map((t) => (
-                                <div key={t.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors">
+                                <div key={t.id} onClick={() => setViewTicket(t)} className="cursor-pointer flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors">
                                     <div className="flex gap-4 items-center">
                                         <div className={`w-2 h-2 rounded-full ${t.status === 'Novo' ? 'bg-purple-500' : 'bg-blue-500'}`}></div>
                                         <div>
@@ -182,8 +184,8 @@ const Dashboard = () => {
                                         </div>
                                     </div>
                                     <span className={`px-3 py-1 text-xs font-medium rounded-full ${t.status === 'Novo' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' :
-                                            t.status === 'Em Andamento' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' :
-                                                'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                                        t.status === 'Em Andamento' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' :
+                                            'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
                                         }`}>{t.status}</span>
                                 </div>
                             ))
@@ -213,6 +215,14 @@ const Dashboard = () => {
                     </div>
                 </div>
             </div>
+            {viewTicket && (
+                <TicketDetailModal
+                    ticket={viewTicket}
+                    onClose={() => setViewTicket(null)}
+                    onUpdate={loadDashboardData}
+                    currentUserRole={userRole}
+                />
+            )}
         </div>
     );
 }
